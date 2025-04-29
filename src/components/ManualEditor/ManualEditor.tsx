@@ -1,10 +1,14 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { TextBlock, ImageBlock, ManualLayout } from "../../types/ManualLayout";
 import { saveLayout, loadLayout, clearLayout } from "../../utils/layoutStorage";
 import { Rnd } from "react-rnd";
 
+
+
 export default function ManualEditor() {
+
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [layout, setLayout] = useState<ManualLayout>({
     pages: [
       {
@@ -52,7 +56,7 @@ export default function ManualEditor() {
     };
 
     const updatedPages: ManualLayout["pages"] = [...layout.pages];
-    updatedPages[0].blocks.push(newBlock);
+    updatedPages[currentPageIndex].blocks.push(newBlock);
     setLayout({ pages: updatedPages });
   };
 
@@ -68,7 +72,7 @@ export default function ManualEditor() {
     };
 
     const updatedPages = [...layout.pages];
-    updatedPages[0].blocks.push(newBlock);
+    updatedPages[currentPageIndex].blocks.push(newBlock);
     console.log('added image block ' + newBlock)
     setLayout({ pages: updatedPages });
   };
@@ -107,19 +111,75 @@ export default function ManualEditor() {
   };
 
   const handleImageUpload = (id: string, file: File) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const updatedPages = layout.pages.map((page) => ({
-        ...page,
-        blocks: page.blocks.map((block) =>
-          block.id === id && block.type === "image"
-            ? { ...block, src: reader.result as string }
-            : block
-        ),
-      }));
-      setLayout({ pages: updatedPages });
-    };
-    reader.readAsDataURL(file);
+    // Use Cloudinary's upload widget
+    const cloudinaryWidget = window.cloudinary?.createUploadWidget(
+      {
+        cloudName: 'dk6iosfzk', // Replace with your Cloudinary cloud name
+        uploadPreset: 'manual_blocks', // Create an upload preset in your Cloudinary dashboard
+        sources: ['local'],
+        multiple: false,
+        folder: 'manual-editor-images', // Specify the folder in Cloudinary for your images
+        resourceType: 'image',
+        clientAllowedFormats: ['jpg', 'jpeg', 'png'],
+      },
+      function (error: any, result: any) {
+        if (!error && result && result.event === 'success') {
+          // Update layout with new image URL from Cloudinary
+          const updatedPages = layout.pages.map((page) => ({
+            ...page,
+            blocks: page.blocks.map((block) =>
+              block.id === id && block.type === 'image'
+                ? { ...block, src: result.info.secure_url } // Cloudinary URL
+                : block
+            ),
+          }));
+          setLayout({ pages: updatedPages });
+        } else {
+          alert('Image upload failed!');
+        }
+      }
+    );
+  
+    cloudinaryWidget.open();
+  };
+
+  const openUploadWidget = () => {
+    if (!window.cloudinary || !window.cloudinary.createUploadWidget) {
+      alert("Cloudinary upload widget not available.");
+      return;
+    }
+  
+    const widget = window.cloudinary.createUploadWidget(
+      {
+        cloudName: "dk6iosfzk",
+        uploadPreset: "manual_blocks", // your unsigned preset name
+        sources: ["local", "url"],
+        multiple: false,
+        cropping: false,
+        folder: "manual_images", // optional
+      },
+      (error: any, result: any) => {
+        if (!error && result.event === "success") {
+          console.log("Upload success:", result.info);
+  
+          const newBlock: ImageBlock = {
+            id: uuidv4(),
+            type: "image",
+            src: result.info.secure_url,
+            x: 50,
+            y: 50,
+            width: 200,
+            height: 200,
+          };
+  
+          const updatedPages = [...layout.pages];
+          updatedPages[currentPageIndex].blocks.push(newBlock);
+          setLayout({ pages: updatedPages });
+        }
+      }
+    );
+  
+    widget.open();
   };
 
   const deleteBlock = (id: string) => {
@@ -149,6 +209,73 @@ export default function ManualEditor() {
     link.click();
   };
   
+  const openMediaLibrary = (blockId: string) => {
+    if (!window.cloudinary || !window.cloudinary.createMediaLibrary) {
+      alert("Cloudinary Media Library is not available.");
+      return;
+    }
+
+    const ml = window.cloudinary?.createMediaLibrary(
+      {
+        cloud_name: "dk6iosfzk",
+        api_key: "232229922537631", // This is safe here — not secret
+        remove_header: true,
+        inline_container: false,
+      },
+      {
+        insertHandler: (data: any) => {
+          if (data.assets && data.assets.length > 0) {
+            const selectedUrl = data.assets[0].secure_url;
+            const updatedPages = layout.pages.map((page) => ({
+              ...page,
+              blocks: page.blocks.map((block) =>
+                block.id === blockId && block.type === "image"
+                  ? { ...block, src: selectedUrl }
+                  : block
+              ),
+            }));
+            setLayout({ pages: updatedPages });
+          }
+        },
+      }
+    );
+  
+    ml.show();
+  };
+
+  const goToNextPage = () => {
+    if (currentPageIndex < layout.pages.length - 1) {
+      setCurrentPageIndex(currentPageIndex + 1);
+    }
+  };
+  
+  const goToPreviousPage = () => {
+    if (currentPageIndex > 0) {
+      setCurrentPageIndex(currentPageIndex - 1);
+    }
+  };
+
+  const addPage = () => {
+    const newPage = {
+      id: uuidv4(),
+      blocks: [],
+    };
+    const updatedPages = [...layout.pages, newPage];
+    setLayout({ pages: updatedPages });
+    setCurrentPageIndex(updatedPages.length - 1); // Move to new page
+  };
+
+  const removeCurrentPage = () => {
+    if (layout.pages.length <= 1) {
+      alert("You must have at least one page.");
+      return;
+    }
+  
+    const updatedPages = layout.pages.filter((_, index) => index !== currentPageIndex);
+    const newPageIndex = Math.max(0, currentPageIndex - 1);
+    setLayout({ pages: updatedPages });
+    setCurrentPageIndex(newPageIndex);
+  };
 
   return (
     <div className="p-4 space-y-4 min-h-screen bg-gray-100">
@@ -169,11 +296,29 @@ export default function ManualEditor() {
         <button onClick={handleExport} className="px-4 py-2 bg-purple-600 text-white rounded">
           Export Layout
         </button>
+        <button onClick={openUploadWidget} className="px-4 py-2 bg-indigo-600 text-white rounded">
+          Upload Image
+        </button>
+        <button onClick={goToPreviousPage} className="px-4 py-2 bg-gray-400 text-white rounded">
+          Previous Page
+        </button>
+        <button onClick={goToNextPage} className="px-4 py-2 bg-gray-400 text-white rounded">
+          Next Page
+        </button>
+        <button onClick={addPage} className="px-4 py-2 bg-green-700 text-white rounded">
+          Add Page
+        </button>
+        <button onClick={removeCurrentPage} className="px-4 py-2 bg-red-700 text-white rounded">
+          Remove Page
+        </button>
+        <span className="ml-2 text-sm text-gray-700">
+          Page {currentPageIndex + 1} of {layout.pages.length}
+        </span>
       </div>
 
       {/* Editor Zone */}
       <div className="relative min-h-[600px] bg-white border-2 border-dashed border-gray-400 rounded p-2 overflow-auto">
-        {layout.pages[0].blocks.map((block) => (
+        {layout.pages[currentPageIndex].blocks.map((block) => (
           <Rnd
             key={block.id}
             size={{ width: block.width, height: block.height }}
@@ -221,6 +366,14 @@ export default function ManualEditor() {
                       >
                         Clear Image
                       </button>
+
+                      {/* 📁 Choose from Cloudinary Library */}
+                      <button
+                        onClick={() => openMediaLibrary(block.id)}
+                        className="mt-1 text-sm text-blue-500 hover:text-blue-700"
+                      >
+                        Choose from Library
+                      </button>
                     </>
                   ) : (
                     <>
@@ -234,6 +387,12 @@ export default function ManualEditor() {
                           }
                         }}
                       />
+                      <button
+                        onClick={() => openMediaLibrary(block.id)}
+                        className="mt-1 text-sm text-blue-500 hover:text-blue-700"
+                      >
+                        Choose from Library
+                      </button>
                     </>
                   )}
                 </div>
