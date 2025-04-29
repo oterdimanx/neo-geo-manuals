@@ -1,3 +1,21 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    .pixel-font {
+      font-family: 'Press Start 2P', cursive;
+    }
+  }
+  
+  /* Optional: Neo Geo-inspired color palette */
+  @layer utilities {
+    .neo-geo-blue {
+      background-color: #0055A4; /* SNK logo blue */
+    }
+    .neo-geo-red {
+      background-color: #E60012; /* SNK logo red */
+    }
+  }

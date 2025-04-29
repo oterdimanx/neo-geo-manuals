@@ -1,14 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { TextBlock, ImageBlock, ManualLayout } from "../../types/ManualLayout";
 import { saveLayout, loadLayout, clearLayout } from "../../utils/layoutStorage";
 import { Rnd } from "react-rnd";
-
-
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function ManualEditor() {
 
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const [draggingBlockId, setDraggingBlockId] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null)
   const [layout, setLayout] = useState<ManualLayout>({
     pages: [
       {
@@ -17,6 +18,19 @@ export default function ManualEditor() {
       },
     ],
   });
+
+  useEffect(() => {
+    // Find the max bottom position of the blocks
+    const maxBottom = layout.pages[currentPageIndex].blocks.reduce((max, block) => {
+      const blockBottom = block.y + block.height;
+      return blockBottom > max ? blockBottom : max;
+    }, 0);
+    
+    // Set the height of the container dynamically
+    if (containerRef.current) {
+      containerRef.current.style.height = `${maxBottom + 50}px`; // Adding some padding for buffer
+    }
+  }, [layout, currentPageIndex]);
 
   useEffect(() => {
     const saved = loadLayout();
@@ -277,9 +291,41 @@ export default function ManualEditor() {
     setCurrentPageIndex(newPageIndex);
   };
 
+  const clonePage = (index: number) => {
+    const pageToClone = layout.pages[index];
+  
+    const clonedPage = {
+      id: uuidv4(),
+      blocks: pageToClone.blocks.map((block) => ({
+        ...block,
+        id: uuidv4(), // Give each block a new unique ID
+      })),
+    };
+  
+    const updatedPages = [
+      ...layout.pages.slice(0, index + 1),
+      clonedPage,
+      ...layout.pages.slice(index + 1),
+    ];
+  
+    setLayout({ pages: updatedPages });
+    setCurrentPageIndex(index + 1); // Navigate to the cloned page
+  };
+
+  const updateContainerHeight = () => {
+    const maxBottom = layout.pages[currentPageIndex].blocks.reduce((max, block) => {
+      const blockBottom = block.y + block.height;
+      return blockBottom > max ? blockBottom : max;
+    }, 0);
+  
+    if (containerRef.current) {
+      containerRef.current.style.height = `${maxBottom + 50}px`;
+    }
+  };
+
   return (
     <div className="p-4 space-y-4 min-h-screen bg-gray-100">
-      <h1 className="text-red-500">Manual Editor</h1>
+      <h1 className="text-red-500 text-pixel text-3xl">Manual Editor</h1>
       <div className="flex gap-2 mb-4">
         <button onClick={handleSave} className="px-4 py-2 bg-blue-500 text-white rounded">
           Save
@@ -316,90 +362,199 @@ export default function ManualEditor() {
         </span>
       </div>
 
-      {/* Editor Zone */}
-      <div className="relative min-h-[600px] bg-white border-2 border-dashed border-gray-400 rounded p-2 overflow-auto">
-        {layout.pages[currentPageIndex].blocks.map((block) => (
-          <Rnd
-            key={block.id}
-            size={{ width: block.width, height: block.height }}
-            position={{ x: block.x, y: block.y }}
-            onDragStop={(_, d) => updateBlockPosition(block.id, d.x, d.y)}
-            onResizeStop={(_, __, ref, ___, position) =>
-              updateBlockSize(block.id, ref.offsetWidth, ref.offsetHeight, position.x, position.y)
-            }
-            bounds="parent"
-            className="border border-gray-300 bg-white p-1 overflow-hidden"
-          >
-            <div className="relative w-full h-full">
-              {/* Delete button */}
-              <button
-                onClick={() => deleteBlock(block.id)}
-                className="absolute top-1 right-1 bg-red-500 text-white text-xs px-1 rounded hover:bg-red-600 z-10"
-              >
-                ✕
-              </button>
-
-              {/* Text Block */}
-              {block.type === "text" && (
-                <textarea
-                  className="w-full h-full resize-none outline-none"
-                  style={{ fontSize: (block as TextBlock).fontSize }}
-                  value={(block as TextBlock).content}
-                  onChange={(e) => updateTextBlock(block.id, e.target.value)}
-                />
-              )}
-
-              {/* Image Block */}
-              {block.type === "image" && (
-                <div className="w-full h-full flex flex-col items-center justify-center">
-                  {(block as ImageBlock).src ? (
-                    <>
+      <div className="flex">
+        {/* Sidebar */}
+        <div className="w-32 overflow-y-auto bg-gray-200 p-2 space-y-2 border-r border-gray-300">
+        {layout.pages.map((page, index) => (
+          <div key={page.id}>
+            <div
+              className={`cursor-pointer border ${
+                index === currentPageIndex ? "border-blue-500" : "border-gray-400"
+              } bg-white rounded shadow-sm p-1`}
+              onClick={() => setCurrentPageIndex(index)}
+            >
+              <div className="text-xs text-center mb-1">Page {index + 1}</div>
+              <div className="relative w-full h-20 overflow-hidden border border-gray-300 bg-white">
+                {page.blocks.map((block) => (
+                  <div
+                    key={block.id}
+                    className="absolute"
+                    style={{
+                      left: `${(block.x / 800) * 100}%`,
+                      top: `${(block.y / 600) * 100}%`,
+                      width: `${(block.width / 800) * 100}%`,
+                      height: `${(block.height / 600) * 100}%`,
+                      backgroundColor: block.type === "text" ? "#ccc" : "transparent",
+                      border: "1px solid #999",
+                      fontSize: "6px",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {block.type === "text" ? (
+                      <span>{(block as TextBlock).content.slice(0, 10)}</span>
+                    ) : (
                       <img
                         src={(block as ImageBlock).src}
-                        alt="Uploaded"
-                        className="w-full h-full object-contain"
+                        className="w-full h-full object-cover"
+                        alt=""
                       />
-                      {/* Clear Image Button */}
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* ✅ Moved clone button below thumbnail */}
+            <button
+              onClick={() => clonePage(index)}
+              className="mt-1 w-full text-xs bg-yellow-400 hover:bg-yellow-500 text-white rounded px-1 py-0.5"
+            >
+              Clone
+            </button>
+          </div>
+        ))}
+        </div>
+        <div className="flex-1 pl-4">
+          {/* Editor Zone */}
+          <div 
+          ref={containerRef}
+          className="relative min-h-[600px] overflow-auto border-2 border-dashed border-gray-400 rounded bg-white"
+          style={{ minHeight: '600px', height: 'auto' }}
+          >
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={layout.pages[currentPageIndex].id}
+                initial={{ x: 50, opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: -50, opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="relative w-full min-h-[600px]"
+              >
+                <AnimatePresence>
+                  {layout.pages[currentPageIndex].blocks.map((block) => (
+                    <motion.div
+                    key={block.id}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    whileHover={{ scale: 0.98 }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                  {containerRef.current && (
+                    <Rnd
+                    size={{ width: block.width, height: block.height }}
+                    position={{ x: block.x, y: block.y }}
+                    onDragStart={() => {
+                      setDraggingBlockId(block.id)
+                      if (containerRef.current) {
+                        containerRef.current.style.height = '2000px' // or some large number to allow dragging far
+                      }
+                    }}
+                    onDragStop={(_, d) => {
+                      setDraggingBlockId(null)
+                      updateBlockPosition(block.id, d.x, d.y)
+                        // Adjust height after drag ends
+                        const maxBottom = layout.pages[currentPageIndex].blocks.reduce((max, block) => {
+                          const bottom = block.id === block.id ? d.y + block.height : block.y + block.height;
+                          return Math.max(max, bottom);
+                        }, 0);
+
+                        if (containerRef.current) {
+                          containerRef.current.style.height = `${maxBottom + 50}px`;
+                        }
+                    }}
+                    onResizeStop={(_, __, ref, ___, position) =>
+                      {
+                        updateBlockSize(block.id, ref.offsetWidth, ref.offsetHeight, position.x, position.y)
+                        // Recalculate height after resizing a block
+                        updateContainerHeight()
+                      }
+                    }
+                    bounds={containerRef.current || undefined}
+                    className="border border-gray-300 bg-white p-1 overflow-hidden"
+                    style={{
+                      zIndex: draggingBlockId === block.id ? 100 : 1,
+                      transition: 'box-shadow 0.2s',
+                      boxShadow: draggingBlockId === block.id ? '0px 4px 12px rgba(0, 0, 0, 0.2)' : 'none'
+                    }}
+                  >
+                    <div className="relative w-full h-full">
+                      {/* Delete button */}
                       <button
-                        onClick={() => clearImage(block.id)}
-                        className="mt-2 text-sm text-red-500 hover:text-red-700"
+                        onClick={() => deleteBlock(block.id)}
+                        className="absolute top-1 right-1 bg-red-500 text-white text-xs px-1 rounded hover:bg-red-600 z-10"
                       >
-                        Clear Image
+                        ✕
                       </button>
 
-                      {/* 📁 Choose from Cloudinary Library */}
-                      <button
-                        onClick={() => openMediaLibrary(block.id)}
-                        className="mt-1 text-sm text-blue-500 hover:text-blue-700"
-                      >
-                        Choose from Library
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-sm text-gray-500 mb-2">Upload an image</p>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          if (e.target.files?.[0]) {
-                            handleImageUpload(block.id, e.target.files[0]);
-                          }
-                        }}
-                      />
-                      <button
-                        onClick={() => openMediaLibrary(block.id)}
-                        className="mt-1 text-sm text-blue-500 hover:text-blue-700"
-                      >
-                        Choose from Library
-                      </button>
-                    </>
+                      {/* Text Block */}
+                      {block.type === "text" && (
+                        <textarea
+                          className="w-full h-full resize-none outline-none"
+                          style={{ fontSize: (block as TextBlock).fontSize }}
+                          value={(block as TextBlock).content}
+                          onChange={(e) => updateTextBlock(block.id, e.target.value)}
+                        />
+                      )}
+
+                      {/* Image Block */}
+                      {block.type === "image" && (
+                        <div className="w-full h-full flex flex-col items-center justify-center">
+                          {(block as ImageBlock).src ? (
+                            <>
+                              <img
+                                src={(block as ImageBlock).src}
+                                alt="Uploaded"
+                                className="w-full h-full object-contain"
+                              />
+                              {/* Clear Image Button */}
+                              <button
+                                onClick={() => clearImage(block.id)}
+                                className="mt-2 text-sm text-red-500 hover:text-red-700"
+                              >
+                                Clear Image
+                              </button>
+
+                              {/* 📁 Choose from Cloudinary Library */}
+                              <button
+                                onClick={() => openMediaLibrary(block.id)}
+                                className="mt-1 text-sm text-blue-500 hover:text-blue-700"
+                              >
+                                Choose from Library
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-sm text-gray-500 mb-2">Upload an image</p>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => {
+                                  if (e.target.files?.[0]) {
+                                    handleImageUpload(block.id, e.target.files[0]);
+                                  }
+                                }}
+                              />
+                              <button
+                                onClick={() => openMediaLibrary(block.id)}
+                                className="mt-1 text-sm text-blue-500 hover:text-blue-700"
+                              >
+                                Choose from Library
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    </Rnd>
                   )}
-                </div>
-              )}
-            </div>
-          </Rnd>
-        ))}
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        </div>
       </div>
     </div>
   );
