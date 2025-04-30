@@ -1,4 +1,4 @@
-import ManualEditor from './components/ManualEditor/ManualEditor'
+import ManualEditor from './components/ManualEditor'
 import './App.css'
 
 function App() {

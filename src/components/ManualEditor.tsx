@@ -1,15 +1,38 @@
-import { useState, useEffect, useRef } from "react";
-import { v4 as uuidv4 } from "uuid";
-import { TextBlock, ImageBlock, ManualLayout } from "../../types/ManualLayout";
-import { saveLayout, loadLayout, clearLayout } from "../../utils/layoutStorage";
-import { Rnd } from "react-rnd";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useRef, SetStateAction } from "react"
+import { v4 as uuidv4 } from "uuid"
+import { TextBlock, ImageBlock, ManualLayout } from "../types/ManualLayout"
+import { saveLayout, loadLayout, clearLayout } from "../utils/layoutStorage"
+import { Rnd } from "react-rnd"
+import { motion, AnimatePresence } from "framer-motion"
+import {
+  DndContext,
+  closestCenter,
+  DragEndEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core"
+import {
+  arrayMove,
+  SortableContext,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable"
+
+import { SortablePageThumbnail } from "./SortablePageThumbnail"
+
 
 export default function ManualEditor() {
 
-  const [currentPageIndex, setCurrentPageIndex] = useState(0);
-  const [draggingBlockId, setDraggingBlockId] = useState<string | null>(null);
+  const [currentPageIndex, setCurrentPageIndex] = useState(0)
+  const [draggingBlockId, setDraggingBlockId] = useState<string | null>(null)
+  const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null)
+  const [showSidebar, setShowSidebar] = useState(false)
+  const sensors = useSensors(useSensor(PointerSensor))
   const containerRef = useRef<HTMLDivElement | null>(null)
+  const handleBlockClick = (blockId: SetStateAction<string | null>) => {
+    setSelectedBlockId(blockId)
+    setShowSidebar(true)
+  }
   const [layout, setLayout] = useState<ManualLayout>({
     pages: [
       {
@@ -124,6 +147,16 @@ export default function ManualEditor() {
     setLayout({ pages: updatedPages });
   };
 
+  const updateFontSize = (id: string, fontSize: number) => {
+    const updatedPages = layout.pages.map((page) => ({
+      ...page,
+      blocks: page.blocks.map((block) =>
+        block.id === id && block.type === "text" ? { ...block, fontSize } : block
+      ),
+    }));
+    setLayout({ pages: updatedPages });
+  };
+
   const handleImageUpload = (id: string, file: File) => {
     // Use Cloudinary's upload widget
     const cloudinaryWidget = window.cloudinary?.createUploadWidget(
@@ -196,33 +229,6 @@ export default function ManualEditor() {
     widget.open();
   };
 
-  const deleteBlock = (id: string) => {
-    const updatedPages = layout.pages.map((page) => ({
-      ...page,
-      blocks: page.blocks.filter((block) => block.id !== id),
-    }));
-    setLayout({ pages: updatedPages });
-  };
-  
-  const clearImage = (id: string) => {
-    const updatedPages = layout.pages.map((page) => ({
-      ...page,
-      blocks: page.blocks.map((block) =>
-        block.id === id && block.type === "image" ? { ...block, src: "" } : block
-      ),
-    }));
-    setLayout({ pages: updatedPages });
-  };
-
-  const handleExport = () => {
-    const json = JSON.stringify(layout, null, 2); // Pretty print the JSON
-    const blob = new Blob([json], { type: "application/json" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "layout.json";
-    link.click();
-  };
-  
   const openMediaLibrary = (blockId: string) => {
     if (!window.cloudinary || !window.cloudinary.createMediaLibrary) {
       alert("Cloudinary Media Library is not available.");
@@ -257,6 +263,33 @@ export default function ManualEditor() {
     ml.show();
   };
 
+  const deleteBlock = (id: string) => {
+    const updatedPages = layout.pages.map((page) => ({
+      ...page,
+      blocks: page.blocks.filter((block) => block.id !== id),
+    }));
+    setLayout({ pages: updatedPages });
+  };
+  
+  const clearImage = (id: string) => {
+    const updatedPages = layout.pages.map((page) => ({
+      ...page,
+      blocks: page.blocks.map((block) =>
+        block.id === id && block.type === "image" ? { ...block, src: "" } : block
+      ),
+    }));
+    setLayout({ pages: updatedPages });
+  };
+
+  const handleExport = () => {
+    const json = JSON.stringify(layout, null, 2); // Pretty print the JSON
+    const blob = new Blob([json], { type: "application/json" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "layout.json";
+    link.click();
+  };
+  
   const goToNextPage = () => {
     if (currentPageIndex < layout.pages.length - 1) {
       setCurrentPageIndex(currentPageIndex + 1);
@@ -311,7 +344,7 @@ export default function ManualEditor() {
     setLayout({ pages: updatedPages });
     setCurrentPageIndex(index + 1); // Navigate to the cloned page
   };
-
+/*
   const updateContainerHeight = () => {
     const maxBottom = layout.pages[currentPageIndex].blocks.reduce((max, block) => {
       const blockBottom = block.y + block.height;
@@ -321,6 +354,24 @@ export default function ManualEditor() {
     if (containerRef.current) {
       containerRef.current.style.height = `${maxBottom + 50}px`;
     }
+  };
+*/
+  const selectedBlock = layout.pages[currentPageIndex].blocks.find((b)=> b.id === selectedBlockId)
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+  
+    if (!over || active.id === over.id) return;
+  
+    const oldIndex = layout.pages.findIndex(p => p.id === active.id);
+    const newIndex = layout.pages.findIndex(p => p.id === over.id);
+  
+    const newPages = arrayMove(layout.pages, oldIndex, newIndex);
+  
+    setLayout({
+      ...layout,
+      pages: newPages,
+    });
   };
 
   return (
@@ -357,64 +408,45 @@ export default function ManualEditor() {
         <button onClick={removeCurrentPage} className="px-4 py-2 bg-red-700 text-white rounded">
           Remove Page
         </button>
+        {/* Sidebar toggle button */}
+        <button
+          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-sm px-2 py-1 rounded"
+          onClick={() => setShowSidebar(!showSidebar)}
+        >
+          {showSidebar ? "Hide Sidebar" : "Show Sidebar"}
+        </button>
         <span className="ml-2 text-sm text-gray-700">
           Page {currentPageIndex + 1} of {layout.pages.length}
         </span>
       </div>
 
       <div className="flex">
-        {/* Sidebar */}
-        <div className="w-32 overflow-y-auto bg-gray-200 p-2 space-y-2 border-r border-gray-300">
-        {layout.pages.map((page, index) => (
-          <div key={page.id}>
-            <div
-              className={`cursor-pointer border ${
-                index === currentPageIndex ? "border-blue-500" : "border-gray-400"
-              } bg-white rounded shadow-sm p-1`}
-              onClick={() => setCurrentPageIndex(index)}
-            >
-              <div className="text-xs text-center mb-1">Page {index + 1}</div>
-              <div className="relative w-full h-20 overflow-hidden border border-gray-300 bg-white">
-                {page.blocks.map((block) => (
-                  <div
-                    key={block.id}
-                    className="absolute"
-                    style={{
-                      left: `${(block.x / 800) * 100}%`,
-                      top: `${(block.y / 600) * 100}%`,
-                      width: `${(block.width / 800) * 100}%`,
-                      height: `${(block.height / 600) * 100}%`,
-                      backgroundColor: block.type === "text" ? "#ccc" : "transparent",
-                      border: "1px solid #999",
-                      fontSize: "6px",
-                      overflow: "hidden",
-                    }}
-                  >
-                    {block.type === "text" ? (
-                      <span>{(block as TextBlock).content.slice(0, 10)}</span>
-                    ) : (
-                      <img
-                        src={(block as ImageBlock).src}
-                        className="w-full h-full object-cover"
-                        alt=""
-                      />
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-            {/* ✅ Moved clone button below thumbnail */}
-            <button
-              onClick={() => clonePage(index)}
-              className="mt-1 w-full text-xs bg-yellow-400 hover:bg-yellow-500 text-white rounded px-1 py-0.5"
-            >
-              Clone
-            </button>
+        {/* Left Sidebar */}
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={layout.pages.map(page => page.id)}
+            strategy={verticalListSortingStrategy}
+          >
+          <div className="w-32 overflow-y-auto bg-gray-200 p-2 space-y-2 border-r border-gray-300">
+            {layout.pages.map((page, index) => (
+              <SortablePageThumbnail
+                key={page.id}
+                page={page}
+                index={index}
+                currentPageIndex={currentPageIndex}
+                onSelect={() => setCurrentPageIndex(index)}
+                onClone={() => clonePage(index)}
+              />
+            ))}
           </div>
-        ))}
-        </div>
+          </SortableContext>
+        </DndContext>
+        {/* Editor / Canvas Zone */}
         <div className="flex-1 pl-4">
-          {/* Editor Zone */}
           <div 
           ref={containerRef}
           className="relative min-h-[600px] overflow-auto border-2 border-dashed border-gray-400 rounded bg-white"
@@ -433,6 +465,7 @@ export default function ManualEditor() {
                   {layout.pages[currentPageIndex].blocks.map((block) => (
                     <motion.div
                     key={block.id}
+                    onClick={()=>handleBlockClick(block.id)}
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
@@ -467,11 +500,11 @@ export default function ManualEditor() {
                       {
                         updateBlockSize(block.id, ref.offsetWidth, ref.offsetHeight, position.x, position.y)
                         // Recalculate height after resizing a block
-                        updateContainerHeight()
+                        //updateContainerHeight()
                       }
                     }
                     bounds={containerRef.current || undefined}
-                    className="border border-gray-300 bg-white p-1 overflow-hidden"
+                    className="cursor-pointer border border-gray-300 bg-white p-1 overflow-hidden"
                     style={{
                       zIndex: draggingBlockId === block.id ? 100 : 1,
                       transition: 'box-shadow 0.2s',
@@ -555,6 +588,23 @@ export default function ManualEditor() {
             </AnimatePresence>
           </div>
         </div>
+        {/** Right Sidebar */}
+        <motion.div
+          initial={{ width: 0, opacity: 0 }}
+          animate={showSidebar ? { width: 320, opacity: 1 } : { width: 0, opacity: 0 }}
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          className="overflow-hidden border-l border-gray-200 bg-white p-4"
+        >
+          {showSidebar && selectedBlockId ? (
+            <div>
+              <h2 className="text-lg font-semibold mb-4">Edit Block</h2>
+              <p>Editing block with ID: {selectedBlockId}</p>
+              {/* Insert block editing UI here */}
+            </div>
+          ) : (
+            <div className="text-gray-500">No block selected</div>
+          )}
+        </motion.div>
       </div>
     </div>
   );
