@@ -65,7 +65,7 @@ export default function ManualEditor() {
   }, [])
 
   const handleSave = () => {
-    saveLayout(layout);
+    saveLayout(layout)
     alert("Layout saved!")
   }
 
@@ -374,6 +374,23 @@ export default function ManualEditor() {
     })
   }
 
+  function updateBlockOpacity(blockId: string, opacity: number) {
+    setLayout(layout => {
+      const page = layout.pages[currentPageIndex]
+      const updatedBlocks = page.blocks.map(block =>
+        block.id === blockId && block.type === "image"
+          ? { ...block, opacity }
+          : block
+      )
+  
+      const updatedPage = { ...page, blocks: updatedBlocks }
+      const updatedPages = [...layout.pages]
+      updatedPages[currentPageIndex] = updatedPage
+  
+      return { ...layout, pages: updatedPages }
+    })
+  }
+
   return (
     <div className="p-4 space-y-4 min-h-screen bg-gray-100">
       <h1 className="text-red-500 text-pixel text-3xl">Manual Editor</h1>
@@ -566,7 +583,33 @@ export default function ManualEditor() {
                                 src={(block as ImageBlock).src}
                                 alt="Uploaded"
                                 className="w-full h-full object-contain"
+                                style={{ opacity: typeof block.opacity === "number" ? block.opacity : 1 }}
                               />
+                              <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center">
+                                <div className="relative flex items-center justify-center">
+                                  {/* Tooltip */}
+                                  <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-black text-white text-xs rounded px-2 py-0.5 z-10 pointer-events-none">
+                                    {Math.round((block.opacity ?? 1) * 100)}%
+                                  </div>
+
+                                  {/* Slider */}
+                                  <input
+                                    type="range"
+                                    min={0}
+                                    max={1}
+                                    step={0.01}
+                                    value={block.opacity ?? 1}
+                                    onChange={(e) => {
+                                      const value = parseFloat(e.target.value);
+                                      updateBlockOpacity(block.id, isNaN(value) ? 1 : value);
+                                    }}
+                                    onPointerDown={(e) => e.stopPropagation()}
+                                    onMouseDown={(e) => e.stopPropagation()}
+                                    onTouchStart={(e) => e.stopPropagation()}
+                                    className="w-20 h-2 transform rotate-[-90deg]"
+                                  />
+                                </div>
+                              </div>
                               {/* Clear Image Button */}
                               <button
                                 onClick={() => clearImage(block.id)}
