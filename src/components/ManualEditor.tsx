@@ -19,6 +19,7 @@ import {
 } from "@dnd-kit/sortable"
 
 import { SortablePageThumbnail } from "./SortablePageThumbnail"
+import { ZoomIn, ZoomOut, RefreshCw } from "lucide-react"
 
 
 export default function ManualEditor() {
@@ -28,6 +29,7 @@ export default function ManualEditor() {
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null)
   const [showSidebar, setShowSidebar] = useState(false)
   const sensors = useSensors(useSensor(PointerSensor))
+  const [zoom, setZoom] = useState(1)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const handleBlockClick = (blockId: SetStateAction<string | null>) => {
     setSelectedBlockId(blockId)
@@ -40,32 +42,32 @@ export default function ManualEditor() {
         blocks: [],
       },
     ],
-  });
+  })
 
   useEffect(() => {
     // Find the max bottom position of the blocks
     const maxBottom = layout.pages[currentPageIndex].blocks.reduce((max, block) => {
-      const blockBottom = block.y + block.height;
-      return blockBottom > max ? blockBottom : max;
-    }, 0);
+      const blockBottom = block.y + block.height
+      return blockBottom > max ? blockBottom : max
+    }, 0)
     
     // Set the height of the container dynamically
     if (containerRef.current) {
-      containerRef.current.style.height = `${maxBottom + 50}px`; // Adding some padding for buffer
+      containerRef.current.style.height = `${maxBottom + 50}px` // Adding some padding for buffer
     }
-  }, [layout, currentPageIndex]);
+  }, [layout, currentPageIndex])
 
   useEffect(() => {
-    const saved = loadLayout();
+    const saved = loadLayout()
     if (saved) {
-      setLayout(saved);
+      setLayout(saved)
     }
-  }, []);
+  }, [])
 
   const handleSave = () => {
     saveLayout(layout);
-    alert("Layout saved!");
-  };
+    alert("Layout saved!")
+  }
 
   const handleClear = () => {
     clearLayout();
@@ -76,9 +78,9 @@ export default function ManualEditor() {
           blocks: [],
         },
       ],
-    });
-    alert("Layout cleared.");
-  };
+    })
+    alert("Layout cleared.")
+  }
 
   const addTextBlock = () => {
     const newBlock: TextBlock = {
@@ -90,12 +92,12 @@ export default function ManualEditor() {
       width: 200,
       height: 100,
       fontSize: 14,
-    };
+    }
 
-    const updatedPages: ManualLayout["pages"] = [...layout.pages];
-    updatedPages[currentPageIndex].blocks.push(newBlock);
-    setLayout({ pages: updatedPages });
-  };
+    const updatedPages: ManualLayout["pages"] = [...layout.pages]
+    updatedPages[currentPageIndex].blocks.push(newBlock)
+    setLayout({ pages: updatedPages })
+  }
 
   const addImageBlock = () => {
     const newBlock: ImageBlock = {
@@ -106,12 +108,12 @@ export default function ManualEditor() {
       y: 50,
       width: 150,
       height: 150,
-    };
+    }
 
-    const updatedPages = [...layout.pages];
-    updatedPages[currentPageIndex].blocks.push(newBlock);
-    console.log('added image block ' + newBlock)
-    setLayout({ pages: updatedPages });
+    const updatedPages = [...layout.pages]
+    updatedPages[currentPageIndex].blocks.push(newBlock)
+    //console.log('added image block ' + newBlock)
+    setLayout({ pages: updatedPages })
   };
 
   const updateBlockPosition = (id: string, x: number, y: number) => {
@@ -120,10 +122,10 @@ export default function ManualEditor() {
       blocks: page.blocks.map((block) =>
         block.id === id ? { ...block, x, y } : block
       ),
-    }));
+    }))
 
-    setLayout({ pages: updatedPages });
-  };
+    setLayout({ pages: updatedPages })
+  }
 
   const updateBlockSize = (id: string, width: number, height: number, x: number, y: number) => {
     const updatedPages = layout.pages.map((page) => ({
@@ -131,10 +133,10 @@ export default function ManualEditor() {
       blocks: page.blocks.map((block) =>
         block.id === id ? { ...block, width, height, x, y } : block
       ),
-    }));
+    }))
 
-    setLayout({ pages: updatedPages });
-  };
+    setLayout({ pages: updatedPages })
+  }
 
   const updateTextBlock = (id: string, value: string) => {
     const updatedPages = layout.pages.map((page) => ({
@@ -142,10 +144,10 @@ export default function ManualEditor() {
       blocks: page.blocks.map((block) =>
         block.id === id && block.type === "text" ? { ...block, content: value } : block
       ),
-    }));
+    }))
 
-    setLayout({ pages: updatedPages });
-  };
+    setLayout({ pages: updatedPages })
+  }
 
   const updateFontSize = (id: string, fontSize: number) => {
     const updatedPages = layout.pages.map((page) => ({
@@ -153,8 +155,8 @@ export default function ManualEditor() {
       blocks: page.blocks.map((block) =>
         block.id === id && block.type === "text" ? { ...block, fontSize } : block
       ),
-    }));
-    setLayout({ pages: updatedPages });
+    }))
+    setLayout({ pages: updatedPages })
   };
 
   const handleImageUpload = (id: string, file: File) => {
@@ -165,7 +167,7 @@ export default function ManualEditor() {
         uploadPreset: 'manual_blocks', // Create an upload preset in your Cloudinary dashboard
         sources: ['local'],
         multiple: false,
-        folder: 'manual-editor-images', // Specify the folder in Cloudinary for your images
+        folder: 'manual_images', // Specify the folder in Cloudinary for your images
         resourceType: 'image',
         clientAllowedFormats: ['jpg', 'jpeg', 'png'],
       },
@@ -179,21 +181,21 @@ export default function ManualEditor() {
                 ? { ...block, src: result.info.secure_url } // Cloudinary URL
                 : block
             ),
-          }));
-          setLayout({ pages: updatedPages });
+          }))
+          setLayout({ pages: updatedPages })
         } else {
-          alert('Image upload failed!');
+          alert('Image upload failed!')
         }
       }
-    );
+    )
   
-    cloudinaryWidget.open();
+    cloudinaryWidget.open()
   };
 
   const openUploadWidget = () => {
     if (!window.cloudinary || !window.cloudinary.createUploadWidget) {
-      alert("Cloudinary upload widget not available.");
-      return;
+      alert("Cloudinary upload widget not available.")
+      return
     }
   
     const widget = window.cloudinary.createUploadWidget(
@@ -207,7 +209,7 @@ export default function ManualEditor() {
       },
       (error: any, result: any) => {
         if (!error && result.event === "success") {
-          console.log("Upload success:", result.info);
+          console.log("Upload success:", result.info)
   
           const newBlock: ImageBlock = {
             id: uuidv4(),
@@ -217,21 +219,21 @@ export default function ManualEditor() {
             y: 50,
             width: 200,
             height: 200,
-          };
+          }
   
-          const updatedPages = [...layout.pages];
-          updatedPages[currentPageIndex].blocks.push(newBlock);
-          setLayout({ pages: updatedPages });
+          const updatedPages = [...layout.pages]
+          updatedPages[currentPageIndex].blocks.push(newBlock)
+          setLayout({ pages: updatedPages })
         }
       }
     );
   
-    widget.open();
+    widget.open()
   };
 
   const openMediaLibrary = (blockId: string) => {
     if (!window.cloudinary || !window.cloudinary.createMediaLibrary) {
-      alert("Cloudinary Media Library is not available.");
+      alert("Cloudinary Media Library is not available.")
       return;
     }
 
@@ -253,14 +255,14 @@ export default function ManualEditor() {
                   ? { ...block, src: selectedUrl }
                   : block
               ),
-            }));
-            setLayout({ pages: updatedPages });
+            }))
+            setLayout({ pages: updatedPages })
           }
         },
       }
-    );
+    )
   
-    ml.show();
+    ml.show()
   };
 
   const deleteBlock = (id: string) => {
@@ -268,7 +270,7 @@ export default function ManualEditor() {
       ...page,
       blocks: page.blocks.filter((block) => block.id !== id),
     }));
-    setLayout({ pages: updatedPages });
+    setLayout({ pages: updatedPages })
   };
   
   const clearImage = (id: string) => {
@@ -277,28 +279,28 @@ export default function ManualEditor() {
       blocks: page.blocks.map((block) =>
         block.id === id && block.type === "image" ? { ...block, src: "" } : block
       ),
-    }));
-    setLayout({ pages: updatedPages });
-  };
+    }))
+    setLayout({ pages: updatedPages })
+  }
 
   const handleExport = () => {
-    const json = JSON.stringify(layout, null, 2); // Pretty print the JSON
-    const blob = new Blob([json], { type: "application/json" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "layout.json";
-    link.click();
+    const json = JSON.stringify(layout, null, 2) // Pretty print the JSON
+    const blob = new Blob([json], { type: "application/json" })
+    const link = document.createElement("a")
+    link.href = URL.createObjectURL(blob)
+    link.download = "layout.json"
+    link.click()
   };
   
   const goToNextPage = () => {
     if (currentPageIndex < layout.pages.length - 1) {
-      setCurrentPageIndex(currentPageIndex + 1);
+      setCurrentPageIndex(currentPageIndex + 1)
     }
   };
   
   const goToPreviousPage = () => {
     if (currentPageIndex > 0) {
-      setCurrentPageIndex(currentPageIndex - 1);
+      setCurrentPageIndex(currentPageIndex - 1)
     }
   };
 
@@ -307,25 +309,25 @@ export default function ManualEditor() {
       id: uuidv4(),
       blocks: [],
     };
-    const updatedPages = [...layout.pages, newPage];
-    setLayout({ pages: updatedPages });
-    setCurrentPageIndex(updatedPages.length - 1); // Move to new page
+    const updatedPages = [...layout.pages, newPage]
+    setLayout({ pages: updatedPages })
+    setCurrentPageIndex(updatedPages.length - 1) // Move to new page
   };
 
   const removeCurrentPage = () => {
     if (layout.pages.length <= 1) {
-      alert("You must have at least one page.");
-      return;
+      alert("You must have at least one page.")
+      return
     }
   
-    const updatedPages = layout.pages.filter((_, index) => index !== currentPageIndex);
-    const newPageIndex = Math.max(0, currentPageIndex - 1);
-    setLayout({ pages: updatedPages });
-    setCurrentPageIndex(newPageIndex);
+    const updatedPages = layout.pages.filter((_, index) => index !== currentPageIndex)
+    const newPageIndex = Math.max(0, currentPageIndex - 1)
+    setLayout({ pages: updatedPages })
+    setCurrentPageIndex(newPageIndex)
   };
 
   const clonePage = (index: number) => {
-    const pageToClone = layout.pages[index];
+    const pageToClone = layout.pages[index]
   
     const clonedPage = {
       id: uuidv4(),
@@ -333,15 +335,15 @@ export default function ManualEditor() {
         ...block,
         id: uuidv4(), // Give each block a new unique ID
       })),
-    };
+    }
   
     const updatedPages = [
       ...layout.pages.slice(0, index + 1),
       clonedPage,
       ...layout.pages.slice(index + 1),
-    ];
+    ]
   
-    setLayout({ pages: updatedPages });
+    setLayout({ pages: updatedPages })
     setCurrentPageIndex(index + 1); // Navigate to the cloned page
   };
 /*
@@ -356,23 +358,21 @@ export default function ManualEditor() {
     }
   };
 */
-  const selectedBlock = layout.pages[currentPageIndex].blocks.find((b)=> b.id === selectedBlockId)
-
   const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
+    const { active, over } = event
   
-    if (!over || active.id === over.id) return;
+    if (!over || active.id === over.id) return
   
-    const oldIndex = layout.pages.findIndex(p => p.id === active.id);
-    const newIndex = layout.pages.findIndex(p => p.id === over.id);
+    const oldIndex = layout.pages.findIndex(p => p.id === active.id)
+    const newIndex = layout.pages.findIndex(p => p.id === over.id)
   
-    const newPages = arrayMove(layout.pages, oldIndex, newIndex);
+    const newPages = arrayMove(layout.pages, oldIndex, newIndex)
   
     setLayout({
       ...layout,
       pages: newPages,
-    });
-  };
+    })
+  }
 
   return (
     <div className="p-4 space-y-4 min-h-screen bg-gray-100">
@@ -408,6 +408,29 @@ export default function ManualEditor() {
         <button onClick={removeCurrentPage} className="px-4 py-2 bg-red-700 text-white rounded">
           Remove Page
         </button>
+        <div className="flex items-center space-x-2 mb-2">
+          <button
+            onClick={() => setZoom(z => Math.min(z + 0.1, 2))}
+            className="p-2 bg-gray-200 hover:bg-gray-300 rounded shadow"
+            title="Zoom In"
+          >
+            <ZoomIn className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setZoom(z => Math.max(z - 0.1, 0.5))}
+            className="p-2 bg-gray-200 hover:bg-gray-300 rounded shadow"
+            title="Zoom Out"
+          >
+            <ZoomOut className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setZoom(1)}
+            className="p-2 bg-gray-200 hover:bg-gray-300 rounded shadow"
+            title="Reset Zoom"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+        </div>
         {/* Sidebar toggle button */}
         <button
           className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-sm px-2 py-1 rounded"
@@ -450,7 +473,11 @@ export default function ManualEditor() {
           <div 
           ref={containerRef}
           className="relative min-h-[600px] overflow-auto border-2 border-dashed border-gray-400 rounded bg-white"
-          style={{ minHeight: '600px', height: 'auto' }}
+          style={{ 
+            minHeight: '600px', 
+            height: 'auto',
+            transform: `scale(${zoom})`
+          }}
           >
             <AnimatePresence mode="wait">
               <motion.div
