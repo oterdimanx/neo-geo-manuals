@@ -17,7 +17,6 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
-
 import { SortablePageThumbnail } from "./SortablePageThumbnail"
 import { ZoomIn, ZoomOut, RefreshCw, MoveUp, MoveDown } from "lucide-react"
 
@@ -44,6 +43,8 @@ export default function ManualEditor() {
   const [zoom, setZoom] = useState(1)
   const containerRef = useRef<HTMLDivElement | null>(null)
   const sidebarRef = useRef<HTMLDivElement | null>(null)
+  const GRID_SIZE = 10;
+  const [showGrid, setShowGrid] = useState(true)
 
   const [layout, setLayout] = useState<ManualLayout>({
     pages: [
@@ -74,28 +75,22 @@ export default function ManualEditor() {
     }
   }, [])
 
-  useEffect( () => {
+  useEffect(() => {
     const handleClickOutside = (event : MouseEvent) => {
-
       if(
         sidebarRef.current && 
         !sidebarRef.current.contains(event.target as Node)
       ){
         setShowSidebar(false)
       }
-
     }
-
     if (showSidebar) {
       document.addEventListener('mousedown', handleClickOutside)
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
-
-  }
-
-  )
+  })
 
   const handleSave = () => {
     saveLayout(layout)
@@ -333,6 +328,10 @@ export default function ManualEditor() {
     setSelectedBlock(updatedBlock); // Keep sidebar in sync
   };
 
+  const snapToGrid = (value: number) => {
+    return Math.round(value / GRID_SIZE) * GRID_SIZE;
+  };
+
   /** Cloudinary */
   const handleImageUpload = (id: string, file: File) => {
     // Use Cloudinary's upload widget
@@ -474,6 +473,20 @@ export default function ManualEditor() {
         <button onClick={removeCurrentPage} className="px-4 py-2 bg-red-700 text-white rounded">
           Remove Page
         </button>
+        {/* Sidebar toggle button */}
+        <button
+          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-sm px-2 py-1 rounded"
+          onClick={() => setShowSidebar(!showSidebar)}
+        >
+          {showSidebar ? "Hide Sidebar" : "Show Sidebar"}
+        </button>
+        {/* Snap-To-Grid toggle button */}
+        <button
+          onClick={() => setShowGrid((prev) => !prev)}
+          className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
+        >
+          {showGrid ? "Hide Grid" : "Show Grid"}
+        </button>
         <div className="flex items-center space-x-2 mb-2">
           <button
             onClick={() => setZoom(z => Math.min(z + 0.1, 2))}
@@ -497,13 +510,6 @@ export default function ManualEditor() {
             <RefreshCw className="w-4 h-4" />
           </button>
         </div>
-        {/* Sidebar toggle button */}
-        <button
-          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-sm px-2 py-1 rounded"
-          onClick={() => setShowSidebar(!showSidebar)}
-        >
-          {showSidebar ? "Hide Sidebar" : "Show Sidebar"}
-        </button>
         <span className="ml-2 text-sm text-gray-700">
           Page {currentPageIndex + 1} of {layout.pages.length}
         </span>
@@ -542,7 +548,10 @@ export default function ManualEditor() {
           style={{ 
             minHeight: '600px', 
             height: 'auto',
-            transform: `scale(${zoom})`
+            transform: `scale(${zoom})`,
+            backgroundImage: showGrid ? `linear-gradient(to right, #eee 1px, transparent 1px),
+            linear-gradient(to bottom, #eee 1px, transparent 1px)` : 'none',
+            backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`,
           }}
           >
             <AnimatePresence mode="wait">
@@ -582,16 +591,20 @@ export default function ManualEditor() {
                     }}
                     onDragStop={(_, d) => {
                       setDraggingBlockId(null)
-                      updateBlockPosition(block.id, d.x, d.y)
-                        // Adjust height after drag ends
-                        const maxBottom = layout.pages[currentPageIndex].blocks.reduce((max, block) => {
-                          const bottom = block.id === block.id ? d.y + block.height : block.y + block.height;
-                          return Math.max(max, bottom);
-                        }, 0);
+                      //snap-to-grid
+                      const snappedX = snapToGrid(d.x);
+                      const snappedY = snapToGrid(d.y);
+                      updateBlockPosition(block.id, snappedX, snappedY)
 
-                        if (containerRef.current) {
-                          containerRef.current.style.height = `${maxBottom + 50}px`;
-                        }
+                      // Adjust height after drag ends
+                      const maxBottom = layout.pages[currentPageIndex].blocks.reduce((max, block) => {
+                        const bottom = block.id === block.id ? d.y + block.height : block.y + block.height;
+                        return Math.max(max, bottom);
+                      }, 0);
+
+                      if (containerRef.current) {
+                        containerRef.current.style.height = `${maxBottom + 50}px`;
+                      }
                     }}
                     onResizeStop={(_, __, ref, ___, position) =>
                       {

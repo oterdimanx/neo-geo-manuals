@@ -1,8 +1,8 @@
-import { FC } from "react";
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import { ManualBlock, ImageBlock, TextBlock } from "@/types/ManualLayout";
-import { cn } from "../utils/utils";
+import { FC } from "react"
+import { useSortable } from "@dnd-kit/sortable"
+import { CSS } from "@dnd-kit/utilities"
+import { ManualBlock, ImageBlock, TextBlock } from "@/types/ManualLayout"
+import { cn } from "../utils/utils"
 import { GripVertical } from "lucide-react"
 
 interface Page {
@@ -11,11 +11,11 @@ interface Page {
 }
 
 interface Props {
-  page: Page;
-  index: number;
-  currentPageIndex: number;
-  onSelect: () => void;
-  onClone: () => void;
+  page: Page
+  index: number
+  currentPageIndex: number
+  onSelect: () => void
+  onClone: () => void
 }
 
 export const SortablePageThumbnail: FC<Props> = ({
@@ -32,12 +32,12 @@ export const SortablePageThumbnail: FC<Props> = ({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: page.id });
+  } = useSortable({ id: page.id })
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-  };
+  }
 
   return (
     <div ref={setNodeRef} style={style}>
@@ -102,5 +102,5 @@ export const SortablePageThumbnail: FC<Props> = ({
         Clone
       </button>
     </div>
-  );
-};
+  )
+}
