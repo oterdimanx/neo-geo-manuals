@@ -29,5 +29,6 @@ export interface ManualLayout {
   pages: {
     id: string
     blocks: ManualBlock[]
+    backgroundColor?: string
   }[]
 }

@@ -550,8 +550,9 @@ export default function ManualEditor() {
             height: 'auto',
             transform: `scale(${zoom})`,
             backgroundImage: showGrid ? `linear-gradient(to right, #eee 1px, transparent 1px),
-            linear-gradient(to bottom, #eee 1px, transparent 1px)` : 'none',
+            linear-gradient(to bottom, #eee 1px, transparent 1px)` : "none",
             backgroundSize: `${GRID_SIZE}px ${GRID_SIZE}px`,
+            backgroundColor: layout.pages[currentPageIndex].backgroundColor || "#ffffff"
           }}
           >
             <AnimatePresence mode="wait">
@@ -831,7 +832,31 @@ export default function ManualEditor() {
 
             </div>
           ) : (
-            <div className="text-gray-500">No block selected</div>
+            <><div className="text-gray-500">No block selected</div><div className="space-y-2">
+                <label className="block text-sm font-medium">Page Background</label>
+                <input
+                  type="color"
+                  value={layout.pages[currentPageIndex].backgroundColor || "#ffffff"}
+                  onChange={(e) => {
+                    const newColor = e.target.value
+                    const updatedPages = [...layout.pages]
+                    updatedPages[currentPageIndex] = {
+                      ...updatedPages[currentPageIndex],
+                      backgroundColor: newColor,
+                    }
+                    setLayout({ ...layout, pages: updatedPages })
+                  } } />
+                <button
+                  onClick={() => {
+                    const updatedPages = [...layout.pages]
+                    delete updatedPages[currentPageIndex].backgroundColor
+                    setLayout({ ...layout, pages: updatedPages })
+                  } }
+                  className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300"
+                >
+                  Reset
+                </button>
+              </div></>
           )}
         </motion.div>
       </div>
