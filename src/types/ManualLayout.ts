@@ -7,6 +7,7 @@ export interface ManualBlockBase {
   width: number
   height: number
   type: BlockType
+  zIndex?: number
 }
 
 export interface TextBlock extends ManualBlockBase {

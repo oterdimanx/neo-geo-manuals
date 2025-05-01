@@ -19,7 +19,7 @@ import {
 } from "@dnd-kit/sortable"
 
 import { SortablePageThumbnail } from "./SortablePageThumbnail"
-import { ZoomIn, ZoomOut, RefreshCw } from "lucide-react"
+import { ZoomIn, ZoomOut, RefreshCw, MoveUp, MoveDown } from "lucide-react"
 
 
 export default function ManualEditor() {
@@ -554,8 +554,12 @@ export default function ManualEditor() {
                 transition={{ duration: 0.3 }}
                 className="relative w-full min-h-[600px]"
               >
+                {/** slice & sort will ensure z-index values are respected */}
                 <AnimatePresence>
-                  {layout.pages[currentPageIndex].blocks.map((block) => (
+                  {layout.pages[currentPageIndex].blocks
+                  .slice()
+                  .sort((a,b) => (a.zIndex ?? 0) - (b.zIndex ?? 0))
+                  .map((block) => (
                     <motion.div
                     key={block.id}
                     onClick={()=>handleBlockClick(block)}
@@ -786,6 +790,31 @@ export default function ManualEditor() {
                   </label>
                 </div>
               )}
+
+              {selectedBlock && (
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <button
+                      className="text-xs bg-gray-200 px-2 py-1 rounded hover:bg-gray-300"
+                      onClick={() =>
+                        updateSelectedBlock({ zIndex: (selectedBlock.zIndex ?? 0) + 1 })
+                      }
+                    >
+                      <MoveUp size="16" />
+                    </button>
+                    <button
+                      className="text-xs bg-gray-200 px-2 py-1 rounded hover:bg-gray-300"
+                      onClick={() =>
+                        updateSelectedBlock({ zIndex: Math.max((selectedBlock.zIndex ?? 0) - 1, 0) })
+                      }
+                    >
+                      <MoveDown size="16" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="text-xs text-gray-500">Layer: {selectedBlock?.zIndex ?? 0}</div>
 
             </div>
           ) : (
