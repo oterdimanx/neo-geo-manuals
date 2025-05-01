@@ -19,6 +19,7 @@ export interface ImageBlock extends ManualBlockBase {
   type: "image"
   src: string
   opacity?: number
+  label?: string
 }
 
 export type ManualBlock = TextBlock | ImageBlock;

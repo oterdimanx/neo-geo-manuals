@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, SetStateAction } from "react"
 import { v4 as uuidv4 } from "uuid"
-import { TextBlock, ImageBlock, ManualLayout } from "../types/ManualLayout"
+import { TextBlock, ImageBlock, ManualLayout, ManualBlock } from "../types/ManualLayout"
 import { saveLayout, loadLayout, clearLayout } from "../utils/layoutStorage"
 import { Rnd } from "react-rnd"
 import { motion, AnimatePresence } from "framer-motion"
@@ -23,18 +23,28 @@ import { ZoomIn, ZoomOut, RefreshCw } from "lucide-react"
 
 
 export default function ManualEditor() {
-
+/*
+  const updateContainerHeight = () => {
+    const maxBottom = layout.pages[currentPageIndex].blocks.reduce((max, block) => {
+      const blockBottom = block.y + block.height;
+      return blockBottom > max ? blockBottom : max;
+    }, 0);
+  
+    if (containerRef.current) {
+      containerRef.current.style.height = `${maxBottom + 50}px`;
+    }
+  };
+*/
   const [currentPageIndex, setCurrentPageIndex] = useState(0)
   const [draggingBlockId, setDraggingBlockId] = useState<string | null>(null)
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null)
+  const [selectedBlock, setSelectedBlock] = useState<ManualBlock | null>(null)
   const [showSidebar, setShowSidebar] = useState(false)
   const sensors = useSensors(useSensor(PointerSensor))
   const [zoom, setZoom] = useState(1)
   const containerRef = useRef<HTMLDivElement | null>(null)
-  const handleBlockClick = (blockId: SetStateAction<string | null>) => {
-    setSelectedBlockId(blockId)
-    setShowSidebar(true)
-  }
+  const sidebarRef = useRef<HTMLDivElement | null>(null)
+
   const [layout, setLayout] = useState<ManualLayout>({
     pages: [
       {
@@ -63,6 +73,29 @@ export default function ManualEditor() {
       setLayout(saved)
     }
   }, [])
+
+  useEffect( () => {
+    const handleClickOutside = (event : MouseEvent) => {
+
+      if(
+        sidebarRef.current && 
+        !sidebarRef.current.contains(event.target as Node)
+      ){
+        setShowSidebar(false)
+      }
+
+    }
+
+    if (showSidebar) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+
+  }
+
+  )
 
   const handleSave = () => {
     saveLayout(layout)
@@ -159,6 +192,148 @@ export default function ManualEditor() {
     setLayout({ pages: updatedPages })
   };
 
+  const deleteBlock = (id: string) => {
+    const updatedPages = layout.pages.map((page) => ({
+      ...page,
+      blocks: page.blocks.filter((block) => block.id !== id),
+    }));
+    setLayout({ pages: updatedPages })
+  };
+
+  const handleBlockClick = (block: ManualBlock) => {
+    setSelectedBlockId(block.id)
+    setSelectedBlock(block)
+    setShowSidebar(true)
+  }
+
+  const clearImage = (id: string) => {
+    const updatedPages = layout.pages.map((page) => ({
+      ...page,
+      blocks: page.blocks.map((block) =>
+        block.id === id && block.type === "image" ? { ...block, src: "" } : block
+      ),
+    }))
+    setLayout({ pages: updatedPages })
+  }
+
+  const handleExport = () => {
+    const json = JSON.stringify(layout, null, 2) // Pretty print the JSON
+    const blob = new Blob([json], { type: "application/json" })
+    const link = document.createElement("a")
+    link.href = URL.createObjectURL(blob)
+    link.download = "layout.json"
+    link.click()
+  };
+  
+  const goToNextPage = () => {
+    if (currentPageIndex < layout.pages.length - 1) {
+      setCurrentPageIndex(currentPageIndex + 1)
+    }
+  };
+  
+  const goToPreviousPage = () => {
+    if (currentPageIndex > 0) {
+      setCurrentPageIndex(currentPageIndex - 1)
+    }
+  };
+
+  const addPage = () => {
+    const newPage = {
+      id: uuidv4(),
+      blocks: [],
+    };
+    const updatedPages = [...layout.pages, newPage]
+    setLayout({ pages: updatedPages })
+    setCurrentPageIndex(updatedPages.length - 1) // Move to new page
+  };
+
+  const removeCurrentPage = () => {
+    if (layout.pages.length <= 1) {
+      alert("You must have at least one page.")
+      return
+    }
+  
+    const updatedPages = layout.pages.filter((_, index) => index !== currentPageIndex)
+    const newPageIndex = Math.max(0, currentPageIndex - 1)
+    setLayout({ pages: updatedPages })
+    setCurrentPageIndex(newPageIndex)
+  };
+
+  const clonePage = (index: number) => {
+    const pageToClone = layout.pages[index]
+  
+    const clonedPage = {
+      id: uuidv4(),
+      blocks: pageToClone.blocks.map((block) => ({
+        ...block,
+        id: uuidv4(), // Give each block a new unique ID
+      })),
+    }
+  
+    const updatedPages = [
+      ...layout.pages.slice(0, index + 1),
+      clonedPage,
+      ...layout.pages.slice(index + 1),
+    ]
+  
+    setLayout({ pages: updatedPages })
+    setCurrentPageIndex(index + 1); // Navigate to the cloned page
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+  
+    if (!over || active.id === over.id) return
+  
+    const oldIndex = layout.pages.findIndex(p => p.id === active.id)
+    const newIndex = layout.pages.findIndex(p => p.id === over.id)
+  
+    const newPages = arrayMove(layout.pages, oldIndex, newIndex)
+  
+    setLayout({
+      ...layout,
+      pages: newPages,
+    })
+  }
+
+  function updateBlockOpacity(blockId: string, opacity: number) {
+    setLayout(layout => {
+      const page = layout.pages[currentPageIndex]
+      const updatedBlocks = page.blocks.map(block =>
+        block.id === blockId && block.type === "image"
+          ? { ...block, opacity }
+          : block
+      )
+  
+      const updatedPage = { ...page, blocks: updatedBlocks }
+      const updatedPages = [...layout.pages]
+      updatedPages[currentPageIndex] = updatedPage
+  
+      return { ...layout, pages: updatedPages }
+    })
+  }
+
+  const updateSelectedBlock = (updatedFields: Partial<ManualBlock>) => {
+    if (!selectedBlock) return;
+  
+    const updatedBlock = { ...selectedBlock, ...updatedFields };
+  
+    const newPages = layout.pages.map((page, pageIndex) => {
+      if (pageIndex !== currentPageIndex) return page;
+  
+      return {
+        ...page,
+        blocks: page.blocks.map(block =>
+          block.id === selectedBlock.id ? updatedBlock : block
+        ),
+      };
+    });
+  
+    setLayout({ ...layout, pages: newPages });
+    setSelectedBlock(updatedBlock); // Keep sidebar in sync
+  };
+
+  /** Cloudinary */
   const handleImageUpload = (id: string, file: File) => {
     // Use Cloudinary's upload widget
     const cloudinaryWidget = window.cloudinary?.createUploadWidget(
@@ -264,132 +439,6 @@ export default function ManualEditor() {
   
     ml.show()
   };
-
-  const deleteBlock = (id: string) => {
-    const updatedPages = layout.pages.map((page) => ({
-      ...page,
-      blocks: page.blocks.filter((block) => block.id !== id),
-    }));
-    setLayout({ pages: updatedPages })
-  };
-  
-  const clearImage = (id: string) => {
-    const updatedPages = layout.pages.map((page) => ({
-      ...page,
-      blocks: page.blocks.map((block) =>
-        block.id === id && block.type === "image" ? { ...block, src: "" } : block
-      ),
-    }))
-    setLayout({ pages: updatedPages })
-  }
-
-  const handleExport = () => {
-    const json = JSON.stringify(layout, null, 2) // Pretty print the JSON
-    const blob = new Blob([json], { type: "application/json" })
-    const link = document.createElement("a")
-    link.href = URL.createObjectURL(blob)
-    link.download = "layout.json"
-    link.click()
-  };
-  
-  const goToNextPage = () => {
-    if (currentPageIndex < layout.pages.length - 1) {
-      setCurrentPageIndex(currentPageIndex + 1)
-    }
-  };
-  
-  const goToPreviousPage = () => {
-    if (currentPageIndex > 0) {
-      setCurrentPageIndex(currentPageIndex - 1)
-    }
-  };
-
-  const addPage = () => {
-    const newPage = {
-      id: uuidv4(),
-      blocks: [],
-    };
-    const updatedPages = [...layout.pages, newPage]
-    setLayout({ pages: updatedPages })
-    setCurrentPageIndex(updatedPages.length - 1) // Move to new page
-  };
-
-  const removeCurrentPage = () => {
-    if (layout.pages.length <= 1) {
-      alert("You must have at least one page.")
-      return
-    }
-  
-    const updatedPages = layout.pages.filter((_, index) => index !== currentPageIndex)
-    const newPageIndex = Math.max(0, currentPageIndex - 1)
-    setLayout({ pages: updatedPages })
-    setCurrentPageIndex(newPageIndex)
-  };
-
-  const clonePage = (index: number) => {
-    const pageToClone = layout.pages[index]
-  
-    const clonedPage = {
-      id: uuidv4(),
-      blocks: pageToClone.blocks.map((block) => ({
-        ...block,
-        id: uuidv4(), // Give each block a new unique ID
-      })),
-    }
-  
-    const updatedPages = [
-      ...layout.pages.slice(0, index + 1),
-      clonedPage,
-      ...layout.pages.slice(index + 1),
-    ]
-  
-    setLayout({ pages: updatedPages })
-    setCurrentPageIndex(index + 1); // Navigate to the cloned page
-  };
-/*
-  const updateContainerHeight = () => {
-    const maxBottom = layout.pages[currentPageIndex].blocks.reduce((max, block) => {
-      const blockBottom = block.y + block.height;
-      return blockBottom > max ? blockBottom : max;
-    }, 0);
-  
-    if (containerRef.current) {
-      containerRef.current.style.height = `${maxBottom + 50}px`;
-    }
-  };
-*/
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event
-  
-    if (!over || active.id === over.id) return
-  
-    const oldIndex = layout.pages.findIndex(p => p.id === active.id)
-    const newIndex = layout.pages.findIndex(p => p.id === over.id)
-  
-    const newPages = arrayMove(layout.pages, oldIndex, newIndex)
-  
-    setLayout({
-      ...layout,
-      pages: newPages,
-    })
-  }
-
-  function updateBlockOpacity(blockId: string, opacity: number) {
-    setLayout(layout => {
-      const page = layout.pages[currentPageIndex]
-      const updatedBlocks = page.blocks.map(block =>
-        block.id === blockId && block.type === "image"
-          ? { ...block, opacity }
-          : block
-      )
-  
-      const updatedPage = { ...page, blocks: updatedBlocks }
-      const updatedPages = [...layout.pages]
-      updatedPages[currentPageIndex] = updatedPage
-  
-      return { ...layout, pages: updatedPages }
-    })
-  }
 
   return (
     <div className="p-4 space-y-4 min-h-screen bg-gray-100">
@@ -509,7 +558,7 @@ export default function ManualEditor() {
                   {layout.pages[currentPageIndex].blocks.map((block) => (
                     <motion.div
                     key={block.id}
-                    onClick={()=>handleBlockClick(block.id)}
+                    onClick={()=>handleBlockClick(block)}
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
@@ -666,10 +715,78 @@ export default function ManualEditor() {
           className="overflow-hidden border-l border-gray-200 bg-white p-4"
         >
           {showSidebar && selectedBlockId ? (
-            <div>
+            // sidebarRef is used to handle its hiding when user clicks outside the panel
+            <div ref={sidebarRef} className="sidebar">
               <h2 className="text-lg font-semibold mb-4">Edit Block</h2>
               <p>Editing block with ID: {selectedBlockId}</p>
-              {/* Insert block editing UI here */}
+{
+                selectedBlock?.type === 'image' && (
+                  <div className="mt-2 text-sm text-gray-700">
+                    <strong>Image File:</strong> {selectedBlock.src.split("/").pop()}
+                  </div>
+                )
+}
+              {/* block editing UI here */}
+              {selectedBlock?.type === "text" && (
+                <div className="space-y-2">
+                  <label className="block">
+                    <span className="text-sm font-medium">Text Content:</span>
+                    <textarea
+                      value={selectedBlock.content}
+                      onChange={e =>
+                        updateSelectedBlock({ content: e.target.value } as Partial<TextBlock>)
+                      }
+                      className="w-full border rounded p-1 text-sm"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="text-sm font-medium">Font Size:</span>
+                    <input
+                      type="number"
+                      min={6}
+                      max={72}
+                      value={selectedBlock.fontSize}
+                      onChange={e =>
+                        updateSelectedBlock({ fontSize: Number(e.target.value) } as Partial<TextBlock>)
+                      }
+                      className="w-full border rounded p-1 text-sm"
+                    />
+                  </label>
+                </div>
+              )}
+
+              {selectedBlock?.type === "image" && (
+                <div className="space-y-2">
+                  <label className="block">
+                    <span className="text-sm font-medium">Image Label:</span>
+                    <input
+                      type="text"
+                      value={selectedBlock.label || ""}
+                      onChange={e =>
+                        updateSelectedBlock({ label: e.target.value } as Partial<ImageBlock>)
+                      }
+                      className="w-full border rounded p-1 text-sm"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="text-sm font-medium">Opacity:</span>
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="1"
+                      step="0.05"
+                      value={selectedBlock.opacity ?? 1}
+                      onChange={e =>
+                        updateSelectedBlock({ opacity: parseFloat(e.target.value) })
+                      }
+                      className="w-full"
+                    />
+                  </label>
+                </div>
+              )}
+
             </div>
           ) : (
             <div className="text-gray-500">No block selected</div>
