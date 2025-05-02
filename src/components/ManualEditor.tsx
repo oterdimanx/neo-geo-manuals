@@ -19,7 +19,7 @@ import {
 } from "@dnd-kit/sortable"
 import { SortablePageThumbnail } from "./SortablePageThumbnail"
 import { ZoomIn, ZoomOut, RefreshCw, MoveUp, MoveDown } from "lucide-react"
-
+import FontSelector from './FontSelector'
 
 export default function ManualEditor() {
 /*
@@ -45,7 +45,6 @@ export default function ManualEditor() {
   const sidebarRef = useRef<HTMLDivElement | null>(null)
   const GRID_SIZE = 10;
   const [showGrid, setShowGrid] = useState(true)
-
   const [layout, setLayout] = useState<ManualLayout>({
     pages: [
       {
@@ -441,7 +440,7 @@ export default function ManualEditor() {
 
   return (
     <div className="p-4 space-y-4 min-h-screen bg-gray-100">
-      <h1 className="text-red-500 text-pixel text-3xl">Manual Editor</h1>
+      <h1 className="text-red-500 font-pixel text-2xl">Manual Editor</h1>
       <div className="flex gap-2 mb-4">
         <button onClick={handleSave} className="px-4 py-2 bg-blue-500 text-white rounded">
           Save
@@ -476,7 +475,11 @@ export default function ManualEditor() {
         {/* Sidebar toggle button */}
         <button
           className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-sm px-2 py-1 rounded"
-          onClick={() => setShowSidebar(!showSidebar)}
+          onClick={() => {
+            setSelectedBlock(null)
+            setSelectedBlockId(null)
+            setShowSidebar(!showSidebar)
+          }}
         >
           {showSidebar ? "Hide Sidebar" : "Show Sidebar"}
         </button>
@@ -635,7 +638,13 @@ export default function ManualEditor() {
                       {block.type === "text" && (
                         <textarea
                           className="w-full h-full resize-none outline-none"
-                          style={{ fontSize: (block as TextBlock).fontSize }}
+                          style={{ 
+                            fontSize: (block as TextBlock).fontSize,
+                            fontWeight: block.fontWeight || "normal",
+                            fontFamily: block.fontFamily || "sans-serif",
+                            fontStyle: block.italic ? "italic" : "normal",
+                            color: block.color || "#000", // Default to black if none provided
+                           }}
                           value={(block as TextBlock).content}
                           onChange={(e) => updateTextBlock(block.id, e.target.value)}
                         />
@@ -737,13 +746,13 @@ export default function ManualEditor() {
             <div ref={sidebarRef} className="sidebar">
               <h2 className="text-lg font-semibold mb-4">Edit Block</h2>
               <p>Editing block with ID: {selectedBlockId}</p>
-{
+              {
                 selectedBlock?.type === 'image' && (
                   <div className="mt-2 text-sm text-gray-700">
                     <strong>Image File:</strong> {selectedBlock.src.split("/").pop()}
                   </div>
                 )
-}
+              }
               {/* block editing UI here */}
               {selectedBlock?.type === "text" && (
                 <div className="space-y-2">
@@ -771,6 +780,50 @@ export default function ManualEditor() {
                       className="w-full border rounded p-1 text-sm"
                     />
                   </label>
+
+                  <label className="block text-sm font-medium mt-2">Font Family</label>
+                  <FontSelector
+                    value={selectedBlock.fontFamily || "sans-serif"}
+                    onChange={(font) =>
+                      updateSelectedBlock({ fontFamily: font } as Partial<TextBlock>)
+                    }
+                  />
+
+                  <label className="block text-sm font-medium mt-2">Font Weight</label>
+                  <select
+                    value={selectedBlock.fontWeight || "normal"}
+                    onChange={(e) =>
+                      updateSelectedBlock({ fontWeight: e.target.value as "normal" | "bold" } as Partial<TextBlock>)
+                    }
+                    className="border rounded px-2 py-1 text-sm w-full"
+                  >
+                    <option value="normal">Normal</option>
+                    <option value="bold">Bold</option>
+                  </select>
+
+                  <label className="inline-flex items-center mt-2">
+                    <input
+                      type="checkbox"
+                      checked={!!selectedBlock.italic}
+                      onChange={(e) =>
+                        updateSelectedBlock({ italic: e.target.checked } as Partial<TextBlock>)
+                      }
+                      className="mr-2"
+                    />
+                  Italic
+                </label>
+
+                {/* Font Color Picker */}
+                <label className="block text-sm font-medium mt-2">Font Color</label>
+                <input
+                  type="color"
+                  value={selectedBlock.color || "#000000"}
+                  onChange={(e) =>
+                    updateSelectedBlock({ color: e.target.value } as Partial<TextBlock>)
+                  }
+                  className="w-full h-8 p-0 border rounded"
+                />
+
                 </div>
               )}
 

@@ -11,7 +11,9 @@ export default {
                 'neo-geo-red': '#E60012',
               },
               fontFamily: {
-                pixel: ['Press Start 2P', 'cursive'],
+                pixel: ['"Press Start 2P"', 'cursive'],
+                roboto: ['Roboto', 'sans-serif'],
+                noto: ['"Noto Sans"', 'sans-serif'],
               },
         },
     },
