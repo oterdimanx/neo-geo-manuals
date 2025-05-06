@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, SetStateAction } from "react"
+import { useState, useEffect, useRef } from "react"
 import { v4 as uuidv4 } from "uuid"
 import { TextBlock, ImageBlock, ManualLayout, ManualBlock } from "../types/ManualLayout"
 import { saveLayout, loadLayout, clearLayout } from "../utils/layoutStorage"
@@ -21,6 +21,7 @@ import { SortablePageThumbnail } from "./SortablePageThumbnail"
 import { ZoomIn, ZoomOut, RefreshCw, MoveUp, MoveDown } from "lucide-react"
 import FontSelector from './FontSelector'
 
+
 export default function ManualEditor() {
 /*
   const updateContainerHeight = () => {
@@ -37,7 +38,7 @@ export default function ManualEditor() {
   const [currentPageIndex, setCurrentPageIndex] = useState(0)
   const [draggingBlockId, setDraggingBlockId] = useState<string | null>(null)
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null)
-  const [selectedBlock, setSelectedBlock] = useState<ManualBlock | null>(null)
+  const [selectedBlock, setSelectedBlock] = useState<ManualBlock | any>(null)
   const [showSidebar, setShowSidebar] = useState(false)
   const sensors = useSensors(useSensor(PointerSensor))
   const [zoom, setZoom] = useState(1)
@@ -53,6 +54,8 @@ export default function ManualEditor() {
       },
     ],
   })
+  const [layoutHistory, setLayoutHistory] = useState<ManualLayout[]>([])
+  const [redoStack, setRedoStack] = useState<ManualLayout[]>([])
 
   useEffect(() => {
     // Find the max bottom position of the blocks
@@ -91,12 +94,45 @@ export default function ManualEditor() {
     }
   })
 
+  /**
+   * Undo / Redo Keyboard Shortcuts
+   */
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === "z") {
+          e.preventDefault();
+          undo();
+        } else if (e.key === "y") {
+          e.preventDefault();
+          redo();
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [layout, layoutHistory, redoStack]);
+
+  /**
+   * Handle / Clear Layout Helpers
+   */
   const handleSave = () => {
     saveLayout(layout)
     alert("Layout saved!")
   }
 
   const handleClear = () => {
+    /**
+     * save layout history before cleaning
+     */
+    const updatedLayout = {
+      ...layout,
+      pages: layout.pages,
+    };
+    updateLayout(updatedLayout);
+     /**
+     * clear layout
+     */
     clearLayout();
     setLayout({
       pages: [
@@ -110,6 +146,13 @@ export default function ManualEditor() {
   }
 
   const addTextBlock = () => {
+    /** undo / redo for addTextBlock */
+    const updatedLayout = {
+      ...layout,
+      pages: layout.pages,
+    };
+    updateLayout(updatedLayout);
+
     const newBlock: TextBlock = {
       id: uuidv4(),
       type: "text",
@@ -127,6 +170,12 @@ export default function ManualEditor() {
   }
 
   const addImageBlock = () => {
+    /** undo / redo for addImageBlock */
+    const updatedLayout = {
+      ...layout,
+      pages: layout.pages,
+    };
+    updateLayout(updatedLayout);
     const newBlock: ImageBlock = {
       id: uuidv4(),
       type: "image",
@@ -144,6 +193,13 @@ export default function ManualEditor() {
   };
 
   const updateBlockPosition = (id: string, x: number, y: number) => {
+    /** undo / redo when updating block position */
+    const updatedLayout = {
+      ...layout,
+      pages: layout.pages,
+    };
+    updateLayout(updatedLayout);
+    /** end undo / redo handling for block positions */
     const updatedPages = layout.pages.map((page) => ({
       ...page,
       blocks: page.blocks.map((block) =>
@@ -155,6 +211,13 @@ export default function ManualEditor() {
   }
 
   const updateBlockSize = (id: string, width: number, height: number, x: number, y: number) => {
+    /** undo / redo when updating block size */
+    const updatedLayout = {
+      ...layout,
+      pages: layout.pages,
+    };
+    updateLayout(updatedLayout);
+    /** end undo / redo handling for block sizes */
     const updatedPages = layout.pages.map((page) => ({
       ...page,
       blocks: page.blocks.map((block) =>
@@ -166,6 +229,13 @@ export default function ManualEditor() {
   }
 
   const updateTextBlock = (id: string, value: string) => {
+    /** undo / redo when updating text blocks */
+    const updatedLayout = {
+      ...layout,
+      pages: layout.pages,
+    };
+    updateLayout(updatedLayout);
+    /** end undo / redo handling for text blocks */
     const updatedPages = layout.pages.map((page) => ({
       ...page,
       blocks: page.blocks.map((block) =>
@@ -201,6 +271,13 @@ export default function ManualEditor() {
   }
 
   const clearImage = (id: string) => {
+    /** undo / redo when clearing an image */
+    const updatedLayout = {
+      ...layout,
+      pages: layout.pages,
+    };
+    updateLayout(updatedLayout);
+    /** end undo / redo handling for images clearing */
     const updatedPages = layout.pages.map((page) => ({
       ...page,
       blocks: page.blocks.map((block) =>
@@ -232,6 +309,13 @@ export default function ManualEditor() {
   };
 
   const addPage = () => {
+    /** undo / redo when adding a page */
+    const updatedLayout = {
+      ...layout,
+      pages: layout.pages,
+    };
+    updateLayout(updatedLayout);
+    /** end undo / redo handling when adding a page */
     const newPage = {
       id: uuidv4(),
       blocks: [],
@@ -246,7 +330,13 @@ export default function ManualEditor() {
       alert("You must have at least one page.")
       return
     }
-  
+    /** undo / redo when removing a page */
+    const updatedLayout = {
+      ...layout,
+      pages: layout.pages,
+    };
+    updateLayout(updatedLayout);
+    /** end undo / redo handling when removing a page */
     const updatedPages = layout.pages.filter((_, index) => index !== currentPageIndex)
     const newPageIndex = Math.max(0, currentPageIndex - 1)
     setLayout({ pages: updatedPages })
@@ -254,8 +344,15 @@ export default function ManualEditor() {
   };
 
   const clonePage = (index: number) => {
+    /** undo / redo when cloning a page */
+    const updatedLayout = {
+      ...layout,
+      pages: layout.pages,
+    };
+    updateLayout(updatedLayout);
+    /** end undo / redo handling when cloning a page */
+
     const pageToClone = layout.pages[index]
-  
     const clonedPage = {
       id: uuidv4(),
       blocks: pageToClone.blocks.map((block) => ({
@@ -291,6 +388,15 @@ export default function ManualEditor() {
   }
 
   function updateBlockOpacity(blockId: string, opacity: number) {
+
+    /** undo / redo when changing opacity parameter */
+    const updatedLayout = {
+      ...layout,
+      pages: layout.pages,
+    };
+    updateLayout(updatedLayout);
+    /** end undo / redo handling when changing opacity */
+
     setLayout(layout => {
       const page = layout.pages[currentPageIndex]
       const updatedBlocks = page.blocks.map(block =>
@@ -329,6 +435,29 @@ export default function ManualEditor() {
 
   const snapToGrid = (value: number) => {
     return Math.round(value / GRID_SIZE) * GRID_SIZE;
+  };
+
+  /** Update Layout undo/redo implementation */
+  const updateLayout = (newLayout: ManualLayout) => {
+    setLayoutHistory((prev) => [...prev, layout]) // push current to undo stack
+    setRedoStack([]); // clear redo
+    setLayout(newLayout)
+  }
+
+  const undo = () => {
+    if (layoutHistory.length === 0) return
+    const previous = layoutHistory[layoutHistory.length - 1]
+    setLayoutHistory((prev) => prev.slice(0, -1))
+    setRedoStack((prev) => [...prev, layout])
+    setLayout(previous)
+  };
+
+  const redo = () => {
+    if (redoStack.length === 0) return;
+    const next = redoStack[redoStack.length - 1];
+    setRedoStack((prev) => prev.slice(0, -1));
+    setLayoutHistory((prev) => [...prev, layout]);
+    setLayout(next);
   };
 
   /** Cloudinary */
@@ -472,6 +601,15 @@ export default function ManualEditor() {
         <button onClick={removeCurrentPage} className="px-4 py-2 bg-red-700 text-white rounded">
           Remove Page
         </button>
+      </div>
+      <div className="flex gap-2 mb-4">
+        <button onClick={undo} disabled={layoutHistory.length === 0} className="px-4 py-2 bg-black text-white rounded">
+          Undo
+        </button>
+        <button onClick={redo} disabled={redoStack.length === 0} className="px-4 py-2 bg-black text-white rounded">
+          Redo
+        </button>
+
         {/* Sidebar toggle button */}
         <button
           className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-sm px-2 py-1 rounded"
