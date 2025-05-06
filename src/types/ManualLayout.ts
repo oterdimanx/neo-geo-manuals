@@ -18,6 +18,7 @@ export interface TextBlock extends ManualBlockBase {
   fontWeight?: "normal" | "bold"
   color?: string
   italic?: boolean
+  rotation?: number
 }
 
 export interface ImageBlock extends ManualBlockBase {

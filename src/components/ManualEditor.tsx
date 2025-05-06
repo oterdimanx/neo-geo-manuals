@@ -18,7 +18,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { SortablePageThumbnail } from "./SortablePageThumbnail"
-import { ZoomIn, ZoomOut, RefreshCw, MoveUp, MoveDown } from "lucide-react"
+import { ZoomIn, ZoomOut, RefreshCw, MoveUp, MoveDown, RotateCcw } from "lucide-react"
 import FontSelector from './FontSelector'
 
 
@@ -56,6 +56,7 @@ export default function ManualEditor() {
   })
   const [layoutHistory, setLayoutHistory] = useState<ManualLayout[]>([])
   const [redoStack, setRedoStack] = useState<ManualLayout[]>([])
+  const [rotatingBlockId, setRotatingBlockId] = useState<string | null>(null)
 
   useEffect(() => {
     // Find the max bottom position of the blocks
@@ -460,6 +461,73 @@ export default function ManualEditor() {
     setLayout(next);
   };
 
+  /** Block Rotation Handlers */
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!rotatingBlockId) return;
+
+    const block = layout.pages[currentPageIndex].blocks.find(
+      (b) => b.id === rotatingBlockId
+    );
+    if (!block) return;
+
+    const blockEl = document.getElementById(`block-${block.id}`);
+    if (!blockEl) return;
+
+    const rect = blockEl.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    const angle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+    const degrees = angle * (180 / Math.PI);
+
+    updateBlockRotation(block.id, degrees);
+  };
+
+  const handleMouseUp = () => {
+    setRotatingBlockId(null);
+  };
+  const startRotating = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    e.preventDefault()
+    setRotatingBlockId(id);
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", stopRotating);
+  };
+  
+  useEffect(() => {
+
+  
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [handleMouseMove]);
+  
+  const stopRotating = () => {
+    document.removeEventListener("mousemove", handleMouseMove);
+    document.removeEventListener("mouseup", stopRotating);
+    setRotatingBlockId(null);
+  };
+
+  const updateBlockRotation = (id: string, rotation: number) => {
+    setLayout((prev) => ({
+      ...prev,
+      pages: prev.pages.map((page, index) =>
+        index === currentPageIndex
+          ? {
+              ...page,
+              blocks: page.blocks.map((block) =>
+                block.id === id ? { ...block, rotation } : block
+              )
+            }
+          : page
+      )
+    }));
+  };
+
   /** Cloudinary */
   const handleImageUpload = (id: string, file: File) => {
     // Use Cloudinary's upload widget
@@ -774,18 +842,33 @@ export default function ManualEditor() {
 
                       {/* Text Block */}
                       {block.type === "text" && (
-                        <textarea
-                          className="w-full h-full resize-none outline-none"
-                          style={{ 
-                            fontSize: (block as TextBlock).fontSize,
-                            fontWeight: block.fontWeight || "normal",
-                            fontFamily: block.fontFamily || "sans-serif",
-                            fontStyle: block.italic ? "italic" : "normal",
-                            color: block.color || "#000", // Default to black if none provided
-                           }}
-                          value={(block as TextBlock).content}
-                          onChange={(e) => updateTextBlock(block.id, e.target.value)}
-                        />
+                        <div 
+                        id={block.id}
+                        className="absolute">
+                          <textarea
+                                className="w-full h-full resize-none outline-none"
+                                style={{
+                                  left: `${(block.x / 800) * 100}%`,
+                                  top: `${(block.y / 600) * 100}%`,
+                                  width: `${(block.width / 800) * 100}%`,
+                                  height: `${(block.height / 600) * 100}%`,
+                                  transform: `rotate(${block.rotation || 0}deg)`,
+                                  transformOrigin: 'center',
+                                  fontSize: (block as TextBlock).fontSize,
+                                  fontWeight: block.fontWeight || "normal",
+                                  fontFamily: block.fontFamily || "sans-serif",
+                                  fontStyle: block.italic ? "italic" : "normal",
+                                  color: block.color || "#000", // Default to black if none provided
+                                }}
+                                value={(block as TextBlock).content}
+                                onChange={(e) => updateTextBlock(block.id, e.target.value)} />
+                                <div
+                                  className="absolute w-4 h-4 bg-blue-500 border border-black rounded-full cursor-pointer"
+                                  style={{ top: 20, left: "50%", transform: "translateX(-50%, -100%)" }}
+                                  onMouseDown={(e) => startRotating(e, block.id)}>
+                                    <RotateCcw size={14} />
+                                  </div>
+                              </div>
                       )}
 
                       {/* Image Block */}
@@ -961,6 +1044,27 @@ export default function ManualEditor() {
                   }
                   className="w-full h-8 p-0 border rounded"
                 />
+
+              {/* Text Rotations Handler */}
+              <label className="block text-sm mt-2">Rotation (degrees)</label>
+              <input
+                type="number"
+                value={selectedBlock.rotation || 0}
+                onChange={(e) =>
+                  updateSelectedBlock({ rotation: parseInt(e.target.value) } as Partial<TextBlock>)
+                }
+                className="border px-2 py-1 rounded w-full"
+              />
+              <input
+                type="range"
+                min="0"
+                max="360"
+                step="15"
+                value={selectedBlock.rotation || 0}
+                onChange={(e) =>
+                  updateSelectedBlock({ rotation: parseInt(e.target.value) } as Partial<TextBlock>)
+                }
+              />
 
                 </div>
               )}
