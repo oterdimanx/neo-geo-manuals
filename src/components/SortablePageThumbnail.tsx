@@ -1,7 +1,7 @@
 import { FC } from "react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { ManualBlock, ImageBlock, TextBlock } from "@/types/ManualLayout"
+import { ManualBlock, ImageBlock, TextBlock, ManualLayout } from "@/types/ManualLayout"
 import { cn } from "../utils/utils"
 import { GripVertical } from "lucide-react"
 
@@ -12,7 +12,7 @@ interface Page {
 }
 
 interface Props {
-  page: Page
+  page: ManualLayout["pages"][number]
   index: number
   currentPageIndex: number
   onSelect: () => void

@@ -57,6 +57,7 @@ export default function ManualEditor() {
   const [layoutHistory, setLayoutHistory] = useState<ManualLayout[]>([])
   const [redoStack, setRedoStack] = useState<ManualLayout[]>([])
   const [rotatingBlockId, setRotatingBlockId] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     // Find the max bottom position of the blocks
@@ -496,8 +497,6 @@ export default function ManualEditor() {
   };
   
   useEffect(() => {
-
-  
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
     return () => {
@@ -526,6 +525,32 @@ export default function ManualEditor() {
           : page
       )
     }));
+  };
+
+  const handleLoadLayoutFromFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+  
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const result = e.target?.result;
+        if (typeof result === "string") {
+          const parsedLayout = JSON.parse(result);
+          
+          // Optional: validate the structure here
+  
+          setLayout(parsedLayout); // replace your layout state
+          setCurrentPageIndex(0);  // reset to page 0
+          localStorage.setItem("manual-layout", JSON.stringify(parsedLayout)); // save to localStorage if desired
+        }
+      } catch (error) {
+        alert("Invalid layout file.");
+        console.error("Layout load error:", error);
+      }
+    };
+  
+    reader.readAsText(file);
   };
 
   /** Cloudinary */
@@ -671,6 +696,16 @@ export default function ManualEditor() {
         </button>
       </div>
       <div className="flex gap-2 mb-4">
+        <button onClick={() => fileInputRef.current?.click()} className="px-4 py-2 bg-yellow-500 text-white rounded">
+          Load Layout
+        </button>
+        <input
+          type="file"
+          accept="application/json"
+          ref={fileInputRef}
+          style={{ display: "none" }}
+          onChange={handleLoadLayoutFromFile}
+        />
         <button onClick={undo} disabled={layoutHistory.length === 0} className="px-4 py-2 bg-black text-white rounded">
           Undo
         </button>
