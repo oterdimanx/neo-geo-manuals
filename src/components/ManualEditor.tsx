@@ -20,6 +20,8 @@ import {
 import { SortablePageThumbnail } from "./SortablePageThumbnail"
 import { ZoomIn, ZoomOut, RefreshCw, MoveUp, MoveDown, RotateCcw } from "lucide-react"
 import FontSelector from './FontSelector'
+import TemplatePreview from "./TemplatePreview";
+import { manualTemplates } from "../data/manualTemplates"
 
 
 export default function ManualEditor() {
@@ -58,6 +60,8 @@ export default function ManualEditor() {
   const [redoStack, setRedoStack] = useState<ManualLayout[]>([])
   const [rotatingBlockId, setRotatingBlockId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [selectedTemplateName, setSelectedTemplateName] = useState<string | null>(null)
+  const selectedTemplate = manualTemplates.find(t => t.name === selectedTemplateName)
 
   useEffect(() => {
     // Find the max bottom position of the blocks
@@ -463,7 +467,6 @@ export default function ManualEditor() {
   };
 
   /** Block Rotation Handlers */
-
   const handleMouseMove = (e: MouseEvent) => {
     if (!rotatingBlockId) return;
 
@@ -488,6 +491,7 @@ export default function ManualEditor() {
   const handleMouseUp = () => {
     setRotatingBlockId(null);
   };
+
   const startRotating = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     e.preventDefault()
@@ -495,7 +499,7 @@ export default function ManualEditor() {
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", stopRotating);
   };
-  
+
   useEffect(() => {
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
@@ -504,7 +508,7 @@ export default function ManualEditor() {
       window.removeEventListener("mouseup", handleMouseUp);
     };
   }, [handleMouseMove]);
-  
+
   const stopRotating = () => {
     document.removeEventListener("mousemove", handleMouseMove);
     document.removeEventListener("mouseup", stopRotating);
@@ -527,6 +531,7 @@ export default function ManualEditor() {
     }));
   };
 
+  /** Handle Loading Layout From File Feature */
   const handleLoadLayoutFromFile = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -552,6 +557,38 @@ export default function ManualEditor() {
   
     reader.readAsText(file);
   };
+
+  /** Loading Page Template Feature */
+  const applyTemplate = (templateName: string | any) => {
+    console.log('applying Template ',templateName)
+    const template = manualTemplates.find((t) => t.name === templateName);
+    if (!template) return;
+
+    const currentPage = layout.pages[currentPageIndex]
+  
+    const newBlocks = template.blocks.map((block) => ({
+      ...structuredClone(block),
+      id: uuidv4(),
+    }));
+  
+    const updatedPage = {
+      ...currentPage,
+      blocks: [...currentPage.blocks, ...newBlocks],
+    };
+
+    const updatedPages = [...layout.pages]
+    updatedPages[currentPageIndex] = updatedPage
+
+    const updatedLayout = {...layout,
+    pages: updatedPages}
+    setLayout(updatedLayout)
+
+    /** undo / redo when applying a new template */
+    updateLayout(updatedLayout);
+    /** end undo / redo when applying a new template */
+
+    return { ...layout, pages: updatedPages }
+  }
 
   /** Cloudinary */
   const handleImageUpload = (id: string, file: File) => {
@@ -706,6 +743,33 @@ export default function ManualEditor() {
           style={{ display: "none" }}
           onChange={handleLoadLayoutFromFile}
         />
+        <select
+          onChange={(e) => setSelectedTemplateName(e.target.value)}
+          className="border rounded px-2 py-1"
+        >
+          <option value="">Select a template</option>
+          {manualTemplates.map((template) => (
+            <option key={template.name} value={template.name}>
+              {template.name}
+            </option>
+          ))}
+        </select>
+
+        {selectedTemplate && (
+          <div className="mt-4">
+            <TemplatePreview blocks={
+              selectedTemplate?.blocks.filter(
+                (block): block is TextBlock => block.type === 'text'
+              ) || []
+            } />
+            <button
+              className="mt-2 bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+              onClick={() => applyTemplate(selectedTemplateName)}
+            >
+              Apply Template
+            </button>
+          </div>
+        )}
         <button onClick={undo} disabled={layoutHistory.length === 0} className="px-4 py-2 bg-black text-white rounded">
           Undo
         </button>

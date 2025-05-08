@@ -37,3 +37,8 @@ export interface ManualLayout {
     backgroundColor?: string
   }[]
 }
+
+export interface ManualTemplate {
+  name: string
+  blocks: ManualBlock[]
+}
