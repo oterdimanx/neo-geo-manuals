@@ -60,7 +60,7 @@ export default function ManualEditor() {
   const [redoStack, setRedoStack] = useState<ManualLayout[]>([])
   const [rotatingBlockId, setRotatingBlockId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [selectedTemplateName, setSelectedTemplateName] = useState<string | null>(null)
+  const [selectedTemplateName, setSelectedTemplateName] = useState<string | ''>('')
   const selectedTemplate = manualTemplates.find(t => t.name === selectedTemplateName)
 
   useEffect(() => {
@@ -560,7 +560,7 @@ export default function ManualEditor() {
 
   /** Loading Page Template Feature */
   const applyTemplate = (templateName: string | any) => {
-    console.log('applying Template ',templateName)
+
     const template = manualTemplates.find((t) => t.name === templateName);
     if (!template) return;
 
@@ -744,6 +744,7 @@ export default function ManualEditor() {
           onChange={handleLoadLayoutFromFile}
         />
         <select
+          value={selectedTemplateName}
           onChange={(e) => setSelectedTemplateName(e.target.value)}
           className="border rounded px-2 py-1"
         >
@@ -763,8 +764,11 @@ export default function ManualEditor() {
               ) || []
             } />
             <button
-              className="mt-2 bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
-              onClick={() => applyTemplate(selectedTemplateName)}
+              className="top-[370px] left-[60%] z-[100] relative mt-2 bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+              onClick={() => {
+                applyTemplate(selectedTemplateName)
+                setSelectedTemplateName('')
+              }}
             >
               Apply Template
             </button>
