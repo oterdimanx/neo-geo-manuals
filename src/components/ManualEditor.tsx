@@ -62,6 +62,9 @@ export default function ManualEditor() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [selectedTemplateName, setSelectedTemplateName] = useState<string | ''>('')
   const selectedTemplate = manualTemplates.find(t => t.name === selectedTemplateName)
+  const [imagePrompt, setImagePrompt] = useState('')
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [imageProvider, setImageProvider] = useState<'openai' | 'stability'>('stability')
 
   useEffect(() => {
     // Find the max bottom position of the blocks
@@ -263,6 +266,7 @@ export default function ManualEditor() {
   };
 
   const deleteBlock = (id: string) => {
+    console.log('deleting block ', id)
     const updatedPages = layout.pages.map((page) => ({
       ...page,
       blocks: page.blocks.filter((block) => block.id !== id),
@@ -589,6 +593,56 @@ export default function ManualEditor() {
 
     return { ...layout, pages: updatedPages }
   }
+
+  /** Image Text Prompt Generation Feature */
+  const handleGenerateImage = async () => {
+    if (!selectedBlockId || !imagePrompt) return
+    setIsGenerating(true)
+  
+    try {
+      const res = await fetch('http://localhost:3001/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: imagePrompt,
+          provider: imageProvider, // 'openai' or 'stability'
+        }),
+      })
+    
+      const data = await res.json();
+      if (res.ok && data.image) {
+        console.log('Generated image:', data.image)
+
+        // Create new image block
+        const newImageBlock: ManualBlock = {
+          id: uuidv4(), // use your own id function
+          type: 'image',
+          x: 100,
+          y: 100,
+          width: 200,
+          height: 200,
+          src: data.image,
+          altText: imagePrompt,
+          label: imagePrompt
+        }
+
+        const updatedPages = [...layout.pages]
+        updatedPages[currentPageIndex].blocks.push(newImageBlock)
+        const updatedLayout = { ...layout, pages: updatedPages }
+    
+        setLayout(updatedLayout)
+        setImagePrompt('')
+
+      } else {
+        console.error('Image generation failed:', data.error)
+      }
+
+    } catch (err) {
+      console.error("Image generation failed:", err)
+    } finally {
+      setIsGenerating(false)
+    }
+  };
 
   /** Cloudinary */
   const handleImageUpload = (id: string, file: File) => {
@@ -1173,6 +1227,18 @@ export default function ManualEditor() {
               )}
 
               {selectedBlock?.type === "image" && (
+                <>
+                <div className="mb-2">
+                  <label className="block text-sm font-medium">Image Provider</label>
+                  <select
+                    value={imageProvider}
+                    onChange={(e) => setImageProvider(e.target.value as 'openai' | 'stability')}
+                    className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
+                  >
+                    <option value="stability">Stability AI (Free)</option>
+                    <option value="openai" disabled>OpenAI (Paid)</option>
+                  </select>
+                </div>
                 <div className="space-y-2">
                   <label className="block">
                     <span className="text-sm font-medium">Image Label:</span>
@@ -1201,6 +1267,24 @@ export default function ManualEditor() {
                     />
                   </label>
                 </div>
+
+                <div className="mt-4">
+                <h3 className="text-sm font-bold mb-1">Generate Image</h3>
+                <textarea
+                  className="w-full border p-2 rounded text-sm"
+                  rows={3}
+                  placeholder="Enter a prompt (e.g. 'hand-drawn ninja character in SNK style')"
+                  value={imagePrompt}
+                  onChange={(e) => setImagePrompt(e.target.value)}
+                />
+                <button
+                  className="mt-2 bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded disabled:opacity-50"
+                  onClick={handleGenerateImage}
+                  disabled={!imagePrompt || isGenerating}
+                >
+                  {isGenerating ? 'Generating...' : 'Generate & Insert Image'}
+                </button>
+                </div></>
               )}
 
               {selectedBlock && (

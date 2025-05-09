@@ -15,4 +15,9 @@ export default defineConfig({
       '@types': path.resolve(__dirname, './src/types'),
     },
   },
+  server: {
+    proxy: {
+      '/api': 'http://localhost:3001',
+    }
+  }
 });
