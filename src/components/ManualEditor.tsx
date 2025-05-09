@@ -600,6 +600,7 @@ export default function ManualEditor() {
     setIsGenerating(true)
   
     try {
+      
       const res = await fetch('http://localhost:3001/generate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -632,6 +633,7 @@ export default function ManualEditor() {
     
         setLayout(updatedLayout)
         setImagePrompt('')
+        deleteBlock(selectedBlockId)
 
       } else {
         console.error('Image generation failed:', data.error)
@@ -1279,7 +1281,7 @@ export default function ManualEditor() {
                 />
                 <button
                   className="mt-2 bg-blue-600 hover:bg-blue-700 text-white text-sm px-4 py-2 rounded disabled:opacity-50"
-                  onClick={handleGenerateImage}
+                  onClick={()=>{handleGenerateImage()}}
                   disabled={!imagePrompt || isGenerating}
                 >
                   {isGenerating ? 'Generating...' : 'Generate & Insert Image'}
