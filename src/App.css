@@ -32,3 +32,31 @@
     animation: logo-spin infinite 20s linear;
   }
 }
+
+@keyframes wave {
+  0%, 60%, 100% {
+    transform: translateY(0);
+  }
+
+  30% {
+    transform: translateY(-8px);
+  }
+}
+
+.animate-wave {
+  animation: wave 1.5s infinite ease-in-out;
+}
+
+@keyframes scroll-left {
+  0% {
+    left: 100%;
+  }
+
+  100% {
+    left: -100%;
+  }
+}
+
+.animate-scroll-left {
+  animation: scroll-left 8s alternate-reverse infinite;
+}

@@ -32,6 +32,8 @@ export interface ImageBlock extends ManualBlockBase {
 export type ManualBlock = TextBlock | ImageBlock;
 
 export interface ManualLayout {
+  id: string
+  title?: string
   pages: {
     id: string
     blocks: ManualBlock[]

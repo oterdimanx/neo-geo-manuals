@@ -22,7 +22,10 @@ import { ZoomIn, ZoomOut, RefreshCw, MoveUp, MoveDown, RotateCcw } from "lucide-
 import FontSelector from './FontSelector'
 import TemplatePreview from "./TemplatePreview";
 import { manualTemplates } from "../data/manualTemplates"
-
+import WaveLoader from "./WaveLoader"
+import { supabase } from "../DB/supabaseClient"
+import { saveManualWithPages } from '../DB/saveManualWithPages'
+import { fetchManualWithPages } from "../DB/fetchManualWithPages" 
 
 export default function ManualEditor() {
 /*
@@ -49,6 +52,8 @@ export default function ManualEditor() {
   const GRID_SIZE = 10;
   const [showGrid, setShowGrid] = useState(true)
   const [layout, setLayout] = useState<ManualLayout>({
+    id: uuidv4(),
+    title: '',
     pages: [
       {
         id: uuidv4(),
@@ -64,7 +69,21 @@ export default function ManualEditor() {
   const selectedTemplate = manualTemplates.find(t => t.name === selectedTemplateName)
   const [imagePrompt, setImagePrompt] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
-  const [imageProvider, setImageProvider] = useState<'openai' | 'stability'>('stability')
+  const [imageProvider, setImageProvider] = useState<'openai' | 'deepai' | 'replicate' | 'stability'>('stability')
+  const [loading, setLoading] = useState(false)
+  const [userId, setUserId] = useState<string>('')
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data : { user }, error } = await supabase.auth.getUser()
+      if(error) {
+        console.error('Error fetching User: ', error.message)
+        return
+      }
+      setUserId( user?.id || '' )
+    }
+    fetchUser()
+  }, [])
 
   useEffect(() => {
     // Find the max bottom position of the blocks
@@ -80,10 +99,26 @@ export default function ManualEditor() {
   }, [layout, currentPageIndex])
 
   useEffect(() => {
-    const saved = loadLayout()
-    if (saved) {
-      setLayout(saved)
-    }
+
+  const loadCurrentLayout = async () => {
+
+      const user = await supabase.auth.getUser()
+      let layout = null
+
+      if (user.data?.user?.id) {
+        layout = await fetchManualWithPages(user.data?.user?.id)
+        if (!layout) {
+          // fallback to localStorage
+          const local = localStorage.getItem(process.env.STORAGE_KEY || '')
+          layout = local ? JSON.parse(local) : loadLayout()
+          console.log('fallback to localStorage')
+          setLayout(layout)
+        }
+      }
+
+      setLayout(layout)
+  }
+  loadCurrentLayout()
   }, [])
 
   useEffect(() => {
@@ -130,6 +165,23 @@ export default function ManualEditor() {
     alert("Layout saved!")
   }
 
+  const handleSaveDB = async () => {
+
+    if('' === userId){
+      console.error('User Not Authenticated')
+      return
+    }
+
+    try {
+
+      const manualId = await saveManualWithPages(userId, layout);
+      alert(`Saved manual with ID ${manualId}`);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save manual');
+    }
+  };
+
   const handleClear = () => {
     /**
      * save layout history before cleaning
@@ -144,6 +196,8 @@ export default function ManualEditor() {
      */
     clearLayout();
     setLayout({
+      id: uuidv4(),
+      title: '',
       pages: [
         {
           id: uuidv4(),
@@ -175,7 +229,7 @@ export default function ManualEditor() {
 
     const updatedPages: ManualLayout["pages"] = [...layout.pages]
     updatedPages[currentPageIndex].blocks.push(newBlock)
-    setLayout({ pages: updatedPages })
+    setLayout({ id: layout.id, pages: updatedPages })
   }
 
   const addImageBlock = () => {
@@ -198,7 +252,7 @@ export default function ManualEditor() {
     const updatedPages = [...layout.pages]
     updatedPages[currentPageIndex].blocks.push(newBlock)
     //console.log('added image block ' + newBlock)
-    setLayout({ pages: updatedPages })
+    setLayout({  id: layout.id, pages: updatedPages })
   };
 
   const updateBlockPosition = (id: string, x: number, y: number) => {
@@ -216,7 +270,7 @@ export default function ManualEditor() {
       ),
     }))
 
-    setLayout({ pages: updatedPages })
+    setLayout({  id: layout.id, pages: updatedPages })
   }
 
   const updateBlockSize = (id: string, width: number, height: number, x: number, y: number) => {
@@ -234,7 +288,7 @@ export default function ManualEditor() {
       ),
     }))
 
-    setLayout({ pages: updatedPages })
+    setLayout({  id: layout.id, pages: updatedPages })
   }
 
   const updateTextBlock = (id: string, value: string) => {
@@ -252,7 +306,7 @@ export default function ManualEditor() {
       ),
     }))
 
-    setLayout({ pages: updatedPages })
+    setLayout({  id: layout.id, pages: updatedPages })
   }
 
   const updateFontSize = (id: string, fontSize: number) => {
@@ -262,7 +316,7 @@ export default function ManualEditor() {
         block.id === id && block.type === "text" ? { ...block, fontSize } : block
       ),
     }))
-    setLayout({ pages: updatedPages })
+    setLayout({  id: layout.id, pages: updatedPages })
   };
 
   const deleteBlock = (id: string) => {
@@ -271,7 +325,7 @@ export default function ManualEditor() {
       ...page,
       blocks: page.blocks.filter((block) => block.id !== id),
     }));
-    setLayout({ pages: updatedPages })
+    setLayout({  id: layout.id, pages: updatedPages })
   };
 
   const handleBlockClick = (block: ManualBlock) => {
@@ -294,7 +348,7 @@ export default function ManualEditor() {
         block.id === id && block.type === "image" ? { ...block, src: "" } : block
       ),
     }))
-    setLayout({ pages: updatedPages })
+    setLayout({  id: layout.id, pages: updatedPages })
   }
 
   const handleExport = () => {
@@ -331,7 +385,7 @@ export default function ManualEditor() {
       blocks: [],
     };
     const updatedPages = [...layout.pages, newPage]
-    setLayout({ pages: updatedPages })
+    setLayout({  id: layout.id, pages: updatedPages })
     setCurrentPageIndex(updatedPages.length - 1) // Move to new page
   };
 
@@ -349,7 +403,7 @@ export default function ManualEditor() {
     /** end undo / redo handling when removing a page */
     const updatedPages = layout.pages.filter((_, index) => index !== currentPageIndex)
     const newPageIndex = Math.max(0, currentPageIndex - 1)
-    setLayout({ pages: updatedPages })
+    setLayout({  id: layout.id, pages: updatedPages })
     setCurrentPageIndex(newPageIndex)
   };
 
@@ -377,7 +431,7 @@ export default function ManualEditor() {
       ...layout.pages.slice(index + 1),
     ]
   
-    setLayout({ pages: updatedPages })
+    setLayout({  id: layout.id, pages: updatedPages })
     setCurrentPageIndex(index + 1); // Navigate to the cloned page
   };
 
@@ -670,7 +724,7 @@ export default function ManualEditor() {
                 : block
             ),
           }))
-          setLayout({ pages: updatedPages })
+          setLayout({  id: layout.id, pages: updatedPages })
         } else {
           alert('Image upload failed!')
         }
@@ -678,7 +732,7 @@ export default function ManualEditor() {
     )
   
     cloudinaryWidget.open()
-  };
+  }
 
   const openUploadWidget = () => {
     if (!window.cloudinary || !window.cloudinary.createUploadWidget) {
@@ -711,13 +765,13 @@ export default function ManualEditor() {
   
           const updatedPages = [...layout.pages]
           updatedPages[currentPageIndex].blocks.push(newBlock)
-          setLayout({ pages: updatedPages })
+          setLayout({  id: layout.id, pages: updatedPages })
         }
       }
     );
   
     widget.open()
-  };
+  }
 
   const openMediaLibrary = (blockId: string) => {
     if (!window.cloudinary || !window.cloudinary.createMediaLibrary) {
@@ -744,13 +798,25 @@ export default function ManualEditor() {
                   : block
               ),
             }))
-            setLayout({ pages: updatedPages })
+            setLayout({  id: layout.id, pages: updatedPages })
           }
         },
       }
     )
   
     ml.show()
+  }
+  
+  const handleLogout = async () => {
+    setLoading(true)
+    try {
+      await supabase.auth.signOut()  // Log the user out
+      window.location.reload()  // Optional: Reload the page to reset the state and UI
+    } catch (error) {
+      console.error('Error logging out:', error)
+    } finally {
+      setLoading(false)
+    }
   };
 
   return (
@@ -830,6 +896,9 @@ export default function ManualEditor() {
             </button>
           </div>
         )}
+        <button onClick={handleSaveDB} className="bg-red-500 text-white px-4 py-2 rounded">
+          Save Blocks
+        </button>
         <button onClick={undo} disabled={layoutHistory.length === 0} className="px-4 py-2 bg-black text-white rounded">
           Undo
         </button>
@@ -881,6 +950,13 @@ export default function ManualEditor() {
         <span className="ml-2 text-sm text-gray-700">
           Page {currentPageIndex + 1} of {layout.pages.length}
         </span>
+        <button 
+        onClick={handleLogout} 
+        disabled={loading}
+        className="bg-red-500 text-white px-4 py-2 rounded"
+      >
+        {loading ? 'Logging out...' : 'Log out'}
+        </button>
       </div>
 
       <div className="flex">
@@ -1227,18 +1303,20 @@ export default function ManualEditor() {
 
                 </div>
               )}
-
+              {isGenerating && <WaveLoader />}
               {selectedBlock?.type === "image" && (
                 <>
                 <div className="mb-2">
                   <label className="block text-sm font-medium">Image Provider</label>
                   <select
                     value={imageProvider}
-                    onChange={(e) => setImageProvider(e.target.value as 'openai' | 'stability')}
+                    onChange={(e) => setImageProvider(e.target.value as 'openai' | 'deepai' | 'stability')}
                     className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
                   >
-                    <option value="stability">Stability AI (Free)</option>
-                    <option value="openai" disabled>OpenAI (Paid)</option>
+                    <option value="stability">Stability AI</option>
+                    <option value="replicate">Replicate AI</option>
+                    <option value="deepai" disabled>Deep AI</option>
+                    <option value="openai" disabled>OpenAI</option>
                   </select>
                 </div>
                 <div className="space-y-2">
@@ -1286,6 +1364,7 @@ export default function ManualEditor() {
                 >
                   {isGenerating ? 'Generating...' : 'Generate & Insert Image'}
                 </button>
+                
                 </div></>
               )}
 
