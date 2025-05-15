@@ -1,7 +1,7 @@
 import { supabase } from './supabaseClient'
 import { ManualLayout, TextBlock, ImageBlock } from '@/types/ManualLayout'
 
-export async function fetchManualWithPages(manualId: string): Promise<ManualLayout | null> {
+export async function fetchLatestManualForUser(userId: string): Promise<ManualLayout | null> {
   const { data, error } = await supabase
     .from('manuals')
     .select(`
@@ -31,7 +31,7 @@ export async function fetchManualWithPages(manualId: string): Promise<ManualLayo
         )
       )
     `)
-    .eq('id', manualId)
+    .eq('user_id', userId)
     .limit(1)
 
   if (error || !data || data.length === 0) {

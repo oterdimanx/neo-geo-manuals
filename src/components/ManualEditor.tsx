@@ -25,7 +25,10 @@ import { manualTemplates } from "../data/manualTemplates"
 import WaveLoader from "./WaveLoader"
 import { supabase } from "../DB/supabaseClient"
 import { saveManualWithPages } from '../DB/saveManualWithPages'
-import { fetchManualWithPages } from "../DB/fetchManualWithPages" 
+import { fetchLatestManualForUser } from "../DB/fetchLatestManualForUser" 
+import ManualList from "./ManualList"
+import EditableTitle from "./EditableTitle"
+import deleteManual from "../DB/deleteManual"
 
 export default function ManualEditor() {
 /*
@@ -106,7 +109,7 @@ export default function ManualEditor() {
       let layout = null
 
       if (user.data?.user?.id) {
-        layout = await fetchManualWithPages(user.data?.user?.id)
+        layout = await fetchLatestManualForUser(user.data?.user?.id)
         if (!layout) {
           // fallback to localStorage
           const local = localStorage.getItem(process.env.STORAGE_KEY || '')
@@ -174,7 +177,7 @@ export default function ManualEditor() {
 
     try {
 
-      const manualId = await saveManualWithPages(userId, layout);
+      const manualId = await saveManualWithPages(userId, layout.title || 'My Manual Title', layout.pages, layout.id);
       alert(`Saved manual with ID ${manualId}`);
     } catch (err) {
       console.error(err);
@@ -229,7 +232,7 @@ export default function ManualEditor() {
 
     const updatedPages: ManualLayout["pages"] = [...layout.pages]
     updatedPages[currentPageIndex].blocks.push(newBlock)
-    setLayout({ id: layout.id, pages: updatedPages })
+    setLayout({ id: layout.id, title: layout.title, pages: updatedPages })
   }
 
   const addImageBlock = () => {
@@ -252,7 +255,7 @@ export default function ManualEditor() {
     const updatedPages = [...layout.pages]
     updatedPages[currentPageIndex].blocks.push(newBlock)
     //console.log('added image block ' + newBlock)
-    setLayout({  id: layout.id, pages: updatedPages })
+    setLayout({  id: layout.id, title: layout.title, pages: updatedPages })
   };
 
   const updateBlockPosition = (id: string, x: number, y: number) => {
@@ -270,7 +273,7 @@ export default function ManualEditor() {
       ),
     }))
 
-    setLayout({  id: layout.id, pages: updatedPages })
+    setLayout({  id: layout.id, title: layout.title, pages: updatedPages })
   }
 
   const updateBlockSize = (id: string, width: number, height: number, x: number, y: number) => {
@@ -288,7 +291,7 @@ export default function ManualEditor() {
       ),
     }))
 
-    setLayout({  id: layout.id, pages: updatedPages })
+    setLayout({  id: layout.id, title: layout.title, pages: updatedPages })
   }
 
   const updateTextBlock = (id: string, value: string) => {
@@ -306,7 +309,7 @@ export default function ManualEditor() {
       ),
     }))
 
-    setLayout({  id: layout.id, pages: updatedPages })
+    setLayout({  id: layout.id, title: layout.title, pages: updatedPages })
   }
 
   const updateFontSize = (id: string, fontSize: number) => {
@@ -316,7 +319,7 @@ export default function ManualEditor() {
         block.id === id && block.type === "text" ? { ...block, fontSize } : block
       ),
     }))
-    setLayout({  id: layout.id, pages: updatedPages })
+    setLayout({  id: layout.id, title: layout.title, pages: updatedPages })
   };
 
   const deleteBlock = (id: string) => {
@@ -325,7 +328,7 @@ export default function ManualEditor() {
       ...page,
       blocks: page.blocks.filter((block) => block.id !== id),
     }));
-    setLayout({  id: layout.id, pages: updatedPages })
+    setLayout({  id: layout.id, title: layout.title, pages: updatedPages })
   };
 
   const handleBlockClick = (block: ManualBlock) => {
@@ -348,7 +351,7 @@ export default function ManualEditor() {
         block.id === id && block.type === "image" ? { ...block, src: "" } : block
       ),
     }))
-    setLayout({  id: layout.id, pages: updatedPages })
+    setLayout({  id: layout.id, title: layout.title, pages: updatedPages })
   }
 
   const handleExport = () => {
@@ -385,7 +388,7 @@ export default function ManualEditor() {
       blocks: [],
     };
     const updatedPages = [...layout.pages, newPage]
-    setLayout({  id: layout.id, pages: updatedPages })
+    setLayout({  id: layout.id, title: layout.title, pages: updatedPages })
     setCurrentPageIndex(updatedPages.length - 1) // Move to new page
   };
 
@@ -403,7 +406,7 @@ export default function ManualEditor() {
     /** end undo / redo handling when removing a page */
     const updatedPages = layout.pages.filter((_, index) => index !== currentPageIndex)
     const newPageIndex = Math.max(0, currentPageIndex - 1)
-    setLayout({  id: layout.id, pages: updatedPages })
+    setLayout({  id: layout.id, title: layout.title, pages: updatedPages })
     setCurrentPageIndex(newPageIndex)
   };
 
@@ -431,7 +434,7 @@ export default function ManualEditor() {
       ...layout.pages.slice(index + 1),
     ]
   
-    setLayout({  id: layout.id, pages: updatedPages })
+    setLayout({  id: layout.id, title: layout.title, pages: updatedPages })
     setCurrentPageIndex(index + 1); // Navigate to the cloned page
   };
 
@@ -700,6 +703,24 @@ export default function ManualEditor() {
     }
   };
 
+  /** Editable Manual Title Feature */
+  const handleTitleSave = async (newTitle: string) => {
+    
+    if (!layout?.id) return;
+
+    layout.title = newTitle
+    setLayout(layout)
+
+    const { error } = await supabase
+      .from("manuals")
+      .update({ title: newTitle })
+      .eq("id", layout.id);
+
+    if (error) {
+      console.error("Failed to update manual title", error);
+    }
+  };
+
   /** Cloudinary */
   const handleImageUpload = (id: string, file: File) => {
     // Use Cloudinary's upload widget
@@ -958,6 +979,32 @@ export default function ManualEditor() {
         {loading ? 'Logging out...' : 'Log out'}
         </button>
       </div>
+      <div className="flex gap-2 mb-4 h-20">
+        
+        <ManualList onSelect={(newLayout) => {
+          setLayout(newLayout)
+        }} />
+
+        <button
+          className="bg-red-500 text-white h-10 px-2 py-2 rounded"
+          onClick={async () => {
+            const confirmDelete = confirm("Are you sure you want to delete this manual?");
+            if (confirmDelete) {
+              try {
+                await deleteManual(layout.id);
+                // Refresh your manual list or redirect to "create" screen
+              } catch (error) {
+                alert("Error deleting manual.");
+              }
+            }
+          }}
+        >
+          Delete Manual
+        </button>
+
+        <EditableTitle title={layout.title || 'Untitled Manual'} onSave={handleTitleSave} />
+
+      </div>
 
       <div className="flex">
         {/* Left Sidebar */}
@@ -1205,7 +1252,7 @@ export default function ManualEditor() {
               {
                 selectedBlock?.type === 'image' && (
                   <div className="mt-2 text-sm text-gray-700">
-                    <strong>Image File:</strong> {selectedBlock.src.split("/").pop()}
+                    <strong>Image File:</strong> {selectedBlock?.src?.split("/").pop()}
                   </div>
                 )
               }

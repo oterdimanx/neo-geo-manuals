@@ -1,74 +1,161 @@
-import { supabase } from './supabaseClient';
-import { ManualLayout } from '@/types/ManualLayout';
+import { supabase } from './supabaseClient'
+import { ImageBlock, ManualLayout, TextBlock } from '@/types/ManualLayout'
 
-export async function saveManualWithPages(userId: string, manual: ManualLayout) {
+export async function saveManualWithPages(
+  userId: string,
+  title: string,
+  pages: any[],
+  manualId?: string // optional param
+) {
   // 1. Upsert the manual
   const { data: manualData, error: manualError } = await supabase
-    .from('manuals')
-    .upsert([
-      {
-        id: manual.id,
-        user_id: userId,
-        title: manual.title || 'Manual Title Placeholder'
-      }
-    ])
-    .select()
-    .single();
+  .from('manuals')
+  .upsert(
+    [{ id: manualId ?? undefined, user_id: userId, title }],
+    { onConflict: 'id'}
+    )
+  .select()
+  .single()
 
-  if (manualError) throw manualError;
+  if (manualError || !manualData ) {
+    throw new Error ( `Failed to save Manual: ${manualError?.message}` )
+  }
+
+  const newManualId = manualData.id
 
   // 2. For each page
-  for (const [index, page] of manual.pages.entries()) {
+  for (const page of pages) {
     const { data: pageData, error: pageError } = await supabase
       .from('pages')
       .upsert([
         {
-          id: page.id,
-          manual_id: manualData.id,
+          id: page.id ?? undefined,
+          manual_id: newManualId,
           background_color: page.backgroundColor,
-          page_order: index
         }
-      ])
+      ],
+      { onConflict: 'id' }
+      )
       .select()
-      .single();
+      .single()
 
-    if (pageError) throw pageError;
+    if (pageError || !pageData ) {
+      throw new Error ( `Failed to save Page: ${pageError?.message}` )
+    }
+
+    /** Block Suppression handling */
+    const currentPageIds = pages.map(page => page.id)
+    const currentBlockIds = pages.flatMap(page =>
+      page.blocks.map((block: { id: any; }) => block.id)
+    )
+    // Suppression Step 1: Fetch existing block IDs in DB for current pages
+    const { data: existingBlocks, error: fetchError } = await supabase
+      .from("blocks")
+      .select("id")
+      .in("page_id", currentPageIds)
+
+    if (fetchError) {
+      console.error("Failed to fetch existing blocks", fetchError)
+      return
+    }
+
+    const existingBlockIds = existingBlocks.map((b: any) => b.id)
+
+    // Suppression Step 2: Find blocks that exist in DB but no longer in layout
+    const blockIdsToDelete = existingBlockIds.filter(
+      id => !currentBlockIds.includes(id)
+    )
+
+    if (blockIdsToDelete.length > 0) {
+      const { error: deleteError } = await supabase
+        .from("blocks")
+        .delete()
+        .in("id", blockIdsToDelete)
+
+      if (deleteError) {
+        console.error("Failed to delete removed blocks", deleteError)
+      }
+    }
+
+    const newPageId = pageData.id
 
     // 3. Save blocks for this page
-    for (const [blockIndex, block] of page.blocks.entries()) {
-      const { error: blockError } = await supabase.from('blocks').upsert([
-        {
-          id: block.id,
-          page_id: pageData.id,
-          type: block.type,
-          block_order: blockIndex,
-          x: block.x,
-          y: block.y,
-          width: block.width,
-          height: block.height,
-          content: (block.content) || {},
-          zIndex: block.zIndex,
-          fontFamily: block.fontFamily,
-          fontWeight: block.fontWeight,
-          fontSize: block.fontSize,
-          color: block.color,
-          italic: block.italic,
-          rotation: block.rotation,
-/*
-          
-          image_provider: block.imageProvider || null,
-          src: block.src || null,
-          prompt: block.prompt || null,
-          
-          
-          
+    const blocksToInsert = page.blocks.map((block: TextBlock | ImageBlock, index: any) => {
+      const isText = block.type === 'text'
+      const isImage = block.type === 'image'
 
-*/
-        }
-      ]);
-      if (blockError) throw blockError;
+      return {
+        id: block.id ?? undefined,
+        page_id: newPageId,
+        type: block.type,
+        block_order: index,
+
+        // Shared
+        x: block.x,
+        y: block.y,
+        width: block.width,
+        height: block.height,
+        zIndex: block.zIndex,
+
+        // Text-only
+        content: isText ? (block as TextBlock).content : null,
+        fontSize: isText ? (block as TextBlock).fontSize : null,
+        fontFamily: isText ? (block as TextBlock).fontFamily : null,
+        fontWeight: isText ? (block as TextBlock).fontWeight : "normal",
+        color: isText ? (block as TextBlock).color : null,
+        italic: isText ? (block as TextBlock).italic : null,
+        rotation: isText ? (block as TextBlock).rotation : null,
+
+        // Image-only
+        src: isImage ? (block as ImageBlock).src : null,
+        altText: isImage ? (block as ImageBlock).altText : null,
+        opacity: isImage ? (block as ImageBlock)?.opacity ?? 1 : null,
+        label: isImage ? (block as ImageBlock).label : null,
+      }
+    })
+
+    const { error: blocksError } = await supabase
+      .from('blocks')
+      .upsert(blocksToInsert, { onConflict: 'id' })
+
+    if (blocksError) {
+      throw new Error(`Failed to save blocks: ${blocksError.message}`)
     }
   }
 
-  return manualData.id;
+  //pages suppression handling
+// Step 1: Fetch existing page IDs in DB for this manual
+const { data: existingPages, error: fetchPagesError } = await supabase
+  .from("pages")
+  .select("id")
+  .eq("manual_id", newManualId) // Use the manual id you just saved/used
+
+if (fetchPagesError) {
+  console.error("Failed to fetch existing pages", fetchPagesError)
+  return
+}
+
+const existingPageIds = existingPages.map((page: any) => page.id)
+
+// Step 2: Get the current layout's page IDs
+const currentPageIds = pages.map((page) => page.id)
+
+// Step 3: Identify pages to delete
+const pageIdsToDelete = existingPageIds.filter(
+  (id) => !currentPageIds.includes(id)
+);
+
+// Step 4: Delete removed pages
+if (pageIdsToDelete.length > 0) {
+  const { error: deletePagesError } = await supabase
+    .from("pages")
+    .delete()
+    .in("id", pageIdsToDelete)
+
+  if (deletePagesError) {
+    console.error("Failed to delete removed pages", deletePagesError)
+  }
+}
+
+  return newManualId
 }

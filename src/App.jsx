@@ -24,8 +24,10 @@ function App() {
   }, [])
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-100">
+    <div className="flex items-center justify-center flex-col min-h-screen bg-gradient-to-br from-gray-100 to-gray-300">
+      <div className="bg-white p-6 rounded-lg shadow-md">
       {session ? <ManualEditor /> : <AuthPanel />}
+      </div>
     </div>
   )
 }

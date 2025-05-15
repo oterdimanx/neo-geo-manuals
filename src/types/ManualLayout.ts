@@ -8,6 +8,7 @@ export interface ManualBlockBase {
   height: number
   type: BlockType
   zIndex?: number
+  order?: number
 }
 
 export interface TextBlock extends ManualBlockBase {
