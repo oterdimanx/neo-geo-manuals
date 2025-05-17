@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { supabase } from "../DB/supabaseClient"
 import { fetchManualsByUser } from "../DB/fetchManualsByUser"
 import { fetchManualWithPages } from "../DB/fetchManualWithPages"
+import { ManualLayout } from "@/types/ManualLayout"
 
 type Manual = {
   id: string
@@ -10,7 +11,12 @@ type Manual = {
   updated_at: string
 }
 
-export default function ManualList({ onSelect }: { onSelect: (manual: any) => void }) {
+type ManualListProps = {
+  onSelect: (manual: ManualLayout) => void;
+  currentLayoutId?: string;
+};
+
+const ManualList: React.FC<ManualListProps> = ({ onSelect, currentLayoutId }) => {
   const [manuals, setManuals] = useState<Manual[]>([])
   const [userId, setUserId] = useState<string | null>(null)
 
@@ -70,20 +76,30 @@ export default function ManualList({ onSelect }: { onSelect: (manual: any) => vo
       }
     ])
 
-    if(pageError) {
+    if (pageError) {
       console.error('Failed to create initial page for manual: ', pageError)
       return
     }
 
     // Fetch the newly created manual layout
     const newManual = await fetchManualWithPages(data.id)
-    onSelect(newManual)
+    if(newManual) handleSelectManual(newManual.id)
   }
 
   return (
     <div className="p-4">
       <h2 className="text-xl font-bold mb-2">Your Manuals</h2>
-      <select className="border rounded px-2 py-1" onChange={(e) => handleSelectManual(e.target.value)}>
+        <select
+          className="w-full p-2 rounded border"
+          value={currentLayoutId} // ✅ this controls which <option> is selected
+          onChange={(e) => {
+            const selectedId = e.target.value;
+            const selectedManual = manuals.find((m) => m.id === selectedId);
+            if (selectedManual) {
+              handleSelectManual(selectedManual.id);
+            }
+          }}
+        >
         <option value="" disabled>
           Select a manual...
         </option>
@@ -102,3 +118,5 @@ export default function ManualList({ onSelect }: { onSelect: (manual: any) => vo
     </div>
   );
 }
+
+export default ManualList

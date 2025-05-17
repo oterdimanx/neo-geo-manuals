@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState } from "react"
 
 export default function Tooltip({ children, text }: { children: React.ReactNode; text: string }) {
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(false)
 
   return (
     <div

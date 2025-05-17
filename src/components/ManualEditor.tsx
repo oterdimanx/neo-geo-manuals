@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, SetStateAction } from "react"
 import { v4 as uuidv4 } from "uuid"
 import { TextBlock, ImageBlock, ManualLayout, ManualBlock } from "../types/ManualLayout"
 import { saveLayout, loadLayout, clearLayout } from "../utils/layoutStorage"
@@ -30,6 +30,7 @@ import ManualList from "./ManualList"
 import EditableTitle from "./EditableTitle"
 import deleteManual from "../DB/deleteManual"
 import TopMenuBar from "./TopMenuBar";
+import ShortcutModal from "./ShortcutModal"
 
 export default function ManualEditor() {
 /*
@@ -78,6 +79,7 @@ export default function ManualEditor() {
   const [userId, setUserId] = useState<string>('')
   const [visibleRotateBlockId, setVisibleRotateBlockId] = useState<string | null>(null)
   const [fullscreenBlockId, setFullscreenBlockId] = useState<string | null>(null)
+  const [isShortcutModalOpen, setIsShortcutModalOpen] = useState(false)
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -164,6 +166,82 @@ export default function ManualEditor() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [layout, layoutHistory, redoStack]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "/") {
+        e.preventDefault();
+        setIsShortcutModalOpen((prev) => !prev);
+      }
+      if (e.ctrlKey && e.key === 's') {
+        e.preventDefault();
+        handleSave();
+      }
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'c') {
+        e.preventDefault();
+        handleClear();
+      }
+      if (e.ctrlKey && e.key.toLowerCase() === 't') {
+        e.preventDefault();
+        addTextBlock();
+      }
+      if (e.ctrlKey && e.key.toLowerCase() === 'i') {
+        e.preventDefault();
+        addImageBlock();
+      }
+      if (e.ctrlKey && e.key.toLowerCase() === 'u') {
+        e.preventDefault();
+        openUploadWidget();
+      }
+      if (e.altKey && e.key === 'ArrowLeft') {
+        e.preventDefault();
+        goToPreviousPage
+      }
+      if (e.altKey && e.key === 'ArrowRight') {
+        e.preventDefault();
+        goToNextPage();
+      }
+      if (e.ctrlKey && e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        addPage();
+      }
+      if (e.ctrlKey && e.key === 'Backspace') {
+        e.preventDefault();
+        removeCurrentPage();
+      }
+      if (e.ctrlKey && e.key.toLowerCase() === 'l') {
+        e.preventDefault();
+        loadLayout()
+      }
+  /*
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        saveManualWithPages()
+      }
+  */
+      if (e.ctrlKey && e.key === '=') {
+        e.preventDefault();
+        setZoom(z => Math.min(z + 0.1, 2))
+
+      }
+      if (e.ctrlKey && e.key === ')') {
+        e.preventDefault();
+        setZoom(z => Math.max(z - 0.1, 0.5))
+      }
+/*
+      if (e.ctrlKey && e.key.toLowerCase() === 'e') {
+        e.preventDefault();
+        toggleFullscreen();
+      }
+  */
+      if (e.ctrlKey && e.key.toLowerCase() === 'q') {
+        e.preventDefault();
+        handleLogout();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   /**
    * Handle / Clear Layout Helpers
@@ -760,9 +838,7 @@ export default function ManualEditor() {
   const stretchHeight = (blockId: string) => {
     const block = layout.pages[currentPageIndex].blocks.find(b => b.id === blockId);
     if (!block) return;
-
     updateSelectedBlock({ x: block.x, y: 0, height: containerRef.current?.style.height } as unknown as Partial<ImageBlock>)
-
     setSelectedBlock(null)
 
   };
@@ -1046,9 +1122,10 @@ export default function ManualEditor() {
       </div>
       <div className="flex gap-2 mb-4 h-20">
         
-        <ManualList onSelect={(newLayout) => {
-          setLayout(newLayout)
-        }} />
+      <ManualList
+        onSelect={(manual: SetStateAction<ManualLayout>) => setLayout(manual)}
+        currentLayoutId={layout?.id}
+      />
 
         <button
           className="bg-red-500 text-white h-10 px-2 py-2 rounded"
@@ -1612,6 +1689,7 @@ export default function ManualEditor() {
           )}
         </motion.div>
       </div>
+      {isShortcutModalOpen && <ShortcutModal onClose={() => setIsShortcutModalOpen(false)} />}
     </div>
   );
 }
