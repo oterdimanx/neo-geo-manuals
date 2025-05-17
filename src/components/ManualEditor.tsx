@@ -18,7 +18,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { SortablePageThumbnail } from "./SortablePageThumbnail"
-import { ZoomIn, ZoomOut, RefreshCw, MoveUp, MoveDown, RotateCcw } from "lucide-react"
+import { ZoomIn, ZoomOut, RefreshCw, MoveUp, MoveDown, RotateCcw, LogOut } from "lucide-react"
 import FontSelector from './FontSelector'
 import TemplatePreview from "./TemplatePreview";
 import { manualTemplates } from "../data/manualTemplates"
@@ -29,6 +29,7 @@ import { fetchLatestManualForUser } from "../DB/fetchLatestManualForUser"
 import ManualList from "./ManualList"
 import EditableTitle from "./EditableTitle"
 import deleteManual from "../DB/deleteManual"
+import TopMenuBar from "./TopMenuBar";
 
 export default function ManualEditor() {
 /*
@@ -75,6 +76,8 @@ export default function ManualEditor() {
   const [imageProvider, setImageProvider] = useState<'openai' | 'deepai' | 'replicate' | 'stability'>('stability')
   const [loading, setLoading] = useState(false)
   const [userId, setUserId] = useState<string>('')
+  const [visibleRotateBlockId, setVisibleRotateBlockId] = useState<string | null>(null)
+  const [fullscreenBlockId, setFullscreenBlockId] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -96,9 +99,11 @@ export default function ManualEditor() {
     }, 0)
     
     // Set the height of the container dynamically
+/*
     if (containerRef.current) {
       containerRef.current.style.height = `${maxBottom + 50}px` // Adding some padding for buffer
     }
+*/
   }, [layout, currentPageIndex])
 
   useEffect(() => {
@@ -549,7 +554,6 @@ export default function ManualEditor() {
     let degrees = angle * (180 / Math.PI)
     if (degrees < 0) degrees += 360
 
-    console.log('angle in degree: ',degrees)
     updateSelectedBlock({ rotation: degrees })
     updateBlockRotation(block.id, degrees)
   }
@@ -726,6 +730,43 @@ export default function ManualEditor() {
     }
   };
 
+  /** Handle Rotate Button Display (TextBlocks) */
+  const handleRotateDisplay = (e: React.MouseEvent, blockId: string) => {
+    e.stopPropagation();
+    e.preventDefault()
+    setVisibleRotateBlockId(blockId)
+  }
+
+  const clearRotateDisplay = () => {
+    setVisibleRotateBlockId(null)
+  }
+
+  /** Handle Image Controls In Editor Zone Handlers */
+  const toggleFullscreen = (blockId: string | null) => {
+    setFullscreenBlockId(prevId => (prevId === blockId ? null : blockId))
+    updateSelectedBlock({ width: '959', height: '600' } as unknown as Partial<ImageBlock>)
+    setSelectedBlock(null)
+  };
+  
+  const stretchWidth = (blockId: string) => {
+    const block = layout.pages[currentPageIndex].blocks.find(b => b.id === blockId);
+    if (!block) return;
+    if (containerRef.current) {
+      updateSelectedBlock({ x: 0, width: containerRef.current.offsetWidth } as unknown as Partial<ImageBlock>)
+    }
+    setSelectedBlock(null)
+
+  };
+  const stretchHeight = (blockId: string) => {
+    const block = layout.pages[currentPageIndex].blocks.find(b => b.id === blockId);
+    if (!block) return;
+
+    updateSelectedBlock({ x: block.x, y: 0, height: containerRef.current?.style.height } as unknown as Partial<ImageBlock>)
+
+    setSelectedBlock(null)
+
+  };
+
   /** Cloudinary */
   const handleImageUpload = (id: string, file: File) => {
     // Use Cloudinary's upload widget
@@ -848,6 +889,25 @@ export default function ManualEditor() {
   return (
     <div className="p-4 space-y-4 min-h-screen bg-gray-100">
       <h1 className="text-red-500 font-pixel text-2xl">Manual Editor</h1>
+
+      <TopMenuBar
+        onUndo={undo}
+        onRedo={redo}
+        onAddTextBlock={addTextBlock}
+        onAddImageBlock={addImageBlock}
+        onOpenUploadWidget={openUploadWidget}
+        onPrevPage={goToPreviousPage}
+        onNextPage={goToNextPage}
+        onAddPage={addPage}
+        onRemovePage={removeCurrentPage}
+        onZoomIn={() => setZoom(z => Math.min(z + 0.1, 2))}
+        onZoomOut={() => setZoom(z => Math.max(z - 0.1, 0.5))}
+        onLoadLayout={() => fileInputRef.current?.click()}
+        onSaveToDB={handleSaveDB} 
+        onSave={handleSave} 
+        onLogout={handleLogout}        
+      />
+
       <div className="flex gap-2 mb-4">
         <button onClick={handleSave} className="px-4 py-2 bg-blue-500 text-white rounded">
           Save
@@ -1082,9 +1142,10 @@ export default function ManualEditor() {
                     position={{ x: block.x, y: block.y }}
                     onDragStart={() => {
                       setDraggingBlockId(block.id)
+                      /*
                       if (containerRef.current) {
-                        containerRef.current.style.height = '2000px' // or some large number to allow dragging far
-                      }
+                        containerRef.current.style.height = '2000px'
+                      }*/
                     }}
                     onDragStop={(_, d) => {
                       setDraggingBlockId(null)
@@ -1115,10 +1176,14 @@ export default function ManualEditor() {
                     style={{
                       zIndex: draggingBlockId === block.id ? 100 : 1,
                       transition: 'box-shadow 0.2s',
-                      boxShadow: draggingBlockId === block.id ? '0px 4px 12px rgba(0, 0, 0, 0.2)' : 'none'
+                      boxShadow: draggingBlockId === block.id ? '0px 4px 12px rgba(0, 0, 0, 0.2)' : 'none',
+                      width: fullscreenBlockId === block.id ? '100%' : '',
+                      height: fullscreenBlockId === block.id ? '100%' : ''
                     }}
                   >
-                    <div className="relative w-full h-full">
+                    <div 
+                    className="relative w-full h-full"
+                    >
                       {/* Delete button */}
                       <button
                         onClick={() => deleteBlock(block.id)}
@@ -1131,6 +1196,8 @@ export default function ManualEditor() {
                       {block.type === "text" && (
                         <div 
                         id={block.id}
+                        onMouseEnter={(e) => handleRotateDisplay(e,block.id)}
+                        onMouseLeave={clearRotateDisplay}
                         className="w-full h-full items-center justify-center absolute bg-transparent"
                         style={{
                           top: `0`,
@@ -1153,35 +1220,49 @@ export default function ManualEditor() {
                                 }}
                                 value={(block as TextBlock).content}
                                 onChange={(e) => updateTextBlock(block.id, e.target.value)} />
-                                <motion.div drag={false}
+
+                                {visibleRotateBlockId === block.id && (
+                                  <motion.div drag={false}
                                   className="absolute w-4 h-4 bg-blue-500 border border-black rounded-full cursor-pointer"
                                   style={{ top: 20, left: "50%", transform: "translateX(-50%, -100%)" }}
- 
                                   >
-                                    <RotateCcw size={14} 
-                                    
-                                      onMouseDown={(e) => {
-                                        console.log('rotateCcw')
-                                        startRotating(e, block.id)
-                                      }}
-                                    />
+                                    <button
+                                    className="absolute top-1 right-1 test-gray-500 hover:text-black transition-opacity duration-150"
+                                    style={{opacity: visibleRotateBlockId === block.id ? 1 : 0}}
+                                    >
+                                      <RotateCcw 
+                                          size={18} 
+                                          onMouseDown={(e) => {
+                                          console.log('rotateCcw')
+                                          startRotating(e, block.id)
+                                        }}
+                                      />
+                                    </button>
                                   </motion.div>
+                                )}
+
                               </div>
                       )}
 
-                      {/* Image Block */}
+                      {/* Image Block | w-full h-full flex flex-col items-center justify-center*/}
                       {block.type === "image" && (
-                        <div className="w-full h-full flex flex-col items-center justify-center">
+                        <div 
+                        id={block.id}
+                        className={`relative transition-all duration-300 flex flex-col items-center justify-center`}
+                        style={{
+                          width: fullscreenBlockId === block.id ? '959' : block.width,
+
+                        }}
+                        >
                           {(block as ImageBlock).src ? (
                             <>
                               <img
                                 src={(block as ImageBlock).src}
-                                alt="Uploaded"
-                                className="w-full h-full object-contain"
-                                style={{ opacity: typeof block.opacity === "number" ? block.opacity : 1 }}
+                                alt={(block as ImageBlock).label || 'Uploaded'}
+                                className="transition-all duration-300"
                               />
-                              <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center">
-                                <div className="relative flex items-center justify-center">
+                              <div className="absolute right-1 top-1/2 -translate-y-1/2 flex">
+                                <div className="">
                                   {/* Tooltip */}
                                   <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-black text-white text-xs rounded px-2 py-0.5 z-10 pointer-events-none">
                                     {Math.round((block.opacity ?? 1) * 100)}%
@@ -1208,7 +1289,7 @@ export default function ManualEditor() {
                               {/* Clear Image Button */}
                               <button
                                 onClick={() => clearImage(block.id)}
-                                className="mt-2 text-sm text-red-500 hover:text-red-700"
+                                className="mt-2 text-sm text-red-500 hover:text-red-700 z-10"
                               >
                                 Clear Image
                               </button>
@@ -1216,10 +1297,55 @@ export default function ManualEditor() {
                               {/* 📁 Choose from Cloudinary Library */}
                               <button
                                 onClick={() => openMediaLibrary(block.id)}
-                                className="mt-1 text-sm text-blue-500 hover:text-blue-700"
+                                className="mt-1 text-sm text-blue-500 hover:text-blue-700 z-10"
                               >
                                 Choose from Library
                               </button>
+
+                              <div className="absolute top-1 right-8 flex gap-2 z-10">
+                                  {/* Clear image */}
+                                  <button
+                                    onClick={(e) => {
+                                      //e.stopPropagation()
+                                      setShowSidebar(false)
+                                      clearImage(block.id)
+                                    }}
+                                    className="text-xs text-red-500 bg-white px-1 py-0.5 rounded shadow hover:bg-red-100"
+                                  >
+                                    ✕
+                                  </button>
+
+                                  {/* Fullscreen toggle */}
+                                  <button
+                                    onClick={() => {
+                                      toggleFullscreen(block.id)
+                                      setShowSidebar(false)
+                                    }}
+                                    className="text-xs bg-white px-1 py-0.5 rounded shadow hover:bg-gray-200"
+                                  >
+                                    ⛶
+                                  </button>
+
+                                  {/* Stretch buttons */}
+                                  <button
+                                    onClick={() => {
+                                      stretchWidth(block.id)
+                                      setShowSidebar(false)
+                                    }}
+                                    className="text-xs bg-white px-1 py-0.5 rounded shadow hover:bg-blue-100"
+                                  >
+                                    ⇆
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      stretchHeight(block.id)
+                                      setShowSidebar(false)
+                                    }}
+                                    className="text-xs bg-white px-1 py-0.5 rounded shadow hover:bg-blue-100"
+                                  >
+                                    ⇅
+                                  </button>
+                                </div>
                             </>
                           ) : (
                             <>
