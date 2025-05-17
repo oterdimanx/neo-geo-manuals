@@ -123,7 +123,7 @@ export async function saveManualWithPages(
     }
   }
 
-  //pages suppression handling
+// Pages Suppression Handling
 // Step 1: Fetch existing page IDs in DB for this manual
 const { data: existingPages, error: fetchPagesError } = await supabase
   .from("pages")

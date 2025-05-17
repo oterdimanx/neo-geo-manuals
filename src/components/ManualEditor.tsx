@@ -529,25 +529,30 @@ export default function ManualEditor() {
 
   /** Block Rotation Handlers */
   const handleMouseMove = (e: MouseEvent) => {
-    if (!rotatingBlockId) return;
+    
+    if (!rotatingBlockId) return
 
     const block = layout.pages[currentPageIndex].blocks.find(
       (b) => b.id === rotatingBlockId
-    );
-    if (!block) return;
+    )
+    if (!block) return
+    
+    const blockEl = document.getElementById(`${rotatingBlockId}`)
+    if (!blockEl) return
 
-    const blockEl = document.getElementById(`block-${block.id}`);
-    if (!blockEl) return;
+    const rect = blockEl.getBoundingClientRect()
+    const centerX = rect.left + rect.width / 2
+    const centerY = rect.top + rect.height / 2
 
-    const rect = blockEl.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
+    const angle = Math.atan2(e.clientY - centerY, e.clientX - centerX)
 
-    const angle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
-    const degrees = angle * (180 / Math.PI);
+    let degrees = angle * (180 / Math.PI)
+    if (degrees < 0) degrees += 360
 
-    updateBlockRotation(block.id, degrees);
-  };
+    console.log('angle in degree: ',degrees)
+    updateSelectedBlock({ rotation: degrees })
+    updateBlockRotation(block.id, degrees)
+  }
 
   const handleMouseUp = () => {
     setRotatingBlockId(null);
@@ -1126,14 +1131,18 @@ export default function ManualEditor() {
                       {block.type === "text" && (
                         <div 
                         id={block.id}
-                        className="absolute">
+                        className="w-full h-full items-center justify-center absolute bg-transparent"
+                        style={{
+                          top: `0`,
+                        }}
+                        >
                           <textarea
-                                className="w-full h-full resize-none outline-none"
+                                className="whitespace-nowrap overflow-ellipsis w-full h-full object-contain"
                                 style={{
                                   left: `${(block.x / 800) * 100}%`,
                                   top: `${(block.y / 600) * 100}%`,
                                   width: `${(block.width / 800) * 100}%`,
-                                  height: `${(block.height / 600) * 100}%`,
+                                  height: `${(block.height / 600) * 400}%`,
                                   transform: `rotate(${block.rotation || 0}deg)`,
                                   transformOrigin: 'center',
                                   fontSize: (block as TextBlock).fontSize,
@@ -1144,12 +1153,19 @@ export default function ManualEditor() {
                                 }}
                                 value={(block as TextBlock).content}
                                 onChange={(e) => updateTextBlock(block.id, e.target.value)} />
-                                <div
+                                <motion.div drag={false}
                                   className="absolute w-4 h-4 bg-blue-500 border border-black rounded-full cursor-pointer"
                                   style={{ top: 20, left: "50%", transform: "translateX(-50%, -100%)" }}
-                                  onMouseDown={(e) => startRotating(e, block.id)}>
-                                    <RotateCcw size={14} />
-                                  </div>
+ 
+                                  >
+                                    <RotateCcw size={14} 
+                                    
+                                      onMouseDown={(e) => {
+                                        console.log('rotateCcw')
+                                        startRotating(e, block.id)
+                                      }}
+                                    />
+                                  </motion.div>
                               </div>
                       )}
 
