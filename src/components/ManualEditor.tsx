@@ -18,7 +18,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { SortablePageThumbnail } from "./SortablePageThumbnail"
-import { ZoomIn, ZoomOut, RefreshCw, MoveUp, MoveDown, RotateCcw, LogOut } from "lucide-react"
+import { ZoomIn, ZoomOut, RefreshCw, MoveUp, MoveDown, RotateCcw, LogOut, Eye } from "lucide-react"
 import FontSelector from './FontSelector'
 import TemplatePreview from "./TemplatePreview";
 import { manualTemplates } from "../data/manualTemplates"
@@ -31,6 +31,7 @@ import EditableTitle from "./EditableTitle"
 import deleteManual from "../DB/deleteManual"
 import TopMenuBar from "./TopMenuBar";
 import ShortcutModal from "./ShortcutModal"
+import { useNavigate } from 'react-router-dom'
 
 export default function ManualEditor() {
 /*
@@ -80,6 +81,7 @@ export default function ManualEditor() {
   const [visibleRotateBlockId, setVisibleRotateBlockId] = useState<string | null>(null)
   const [fullscreenBlockId, setFullscreenBlockId] = useState<string | null>(null)
   const [isShortcutModalOpen, setIsShortcutModalOpen] = useState(false)
+  const navigate = useNavigate()
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -1145,6 +1147,9 @@ export default function ManualEditor() {
         </button>
 
         <EditableTitle title={layout.title || 'Untitled Manual'} onSave={handleTitleSave} />
+        <button onClick={() => { navigate(`/preview/${layout.id}`) }}>
+          <Eye className="w-20" size={100}  />
+        </button>
 
       </div>
 

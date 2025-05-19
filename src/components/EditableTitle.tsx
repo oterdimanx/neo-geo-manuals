@@ -44,11 +44,11 @@ return editing ? (
         }
     }}
     autoFocus
-    className="text-xl font-bold border px-2 py-1 rounded"
+    className="relative w-[150px] text-xl font-bold top-[5px] items-center justify-center font-bold border rounded"
     />
 ) : (
     <h1
-    className="text-xl font-bold cursor-pointer"
+    className="relative w-[300px] text-xl top-[5px] items-center justify-center font-bold cursor-pointer"
     onClick={() => setEditing(true)}
     >
     {value}

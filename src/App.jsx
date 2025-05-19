@@ -1,8 +1,11 @@
+import { Routes, Route } from 'react-router-dom'
 import ManualEditor from './components/ManualEditor'
 import AuthPanel from './components/AuthPanel'
 import './App.css'
 import { useEffect, useState } from 'react'
 import { supabase } from './DB/supabaseClient'
+import PreviewManual from './components/PreviewManual'
+import NotFound from './components/NotFound'
 
 function App() {
   const [session, setSession] = useState(null)
@@ -25,8 +28,16 @@ function App() {
 
   return (
     <div className="flex items-center justify-center flex-col min-h-screen bg-gradient-to-br from-gray-100 to-gray-300">
-      <div className="bg-white p-6 rounded-lg shadow-md">
-      {session ? <ManualEditor /> : <AuthPanel />}
+      <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-6xl">
+        {!session ? (
+          <AuthPanel />
+        ) : (
+          <Routes>
+            <Route path="/" element={<ManualEditor />} />
+            <Route path="/preview/:manualId" element={<PreviewManual />} />
+            <Route path="*" element={<NotFound />} /> {/* Catch-all */}
+          </Routes>
+        )}
       </div>
     </div>
   )

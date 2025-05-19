@@ -88,10 +88,10 @@ const ManualList: React.FC<ManualListProps> = ({ onSelect, currentLayoutId }) =>
 
   return (
     <div className="p-4">
-      <h2 className="text-xl font-bold mb-2">Your Manuals</h2>
+      <h2 className="relative text-xl font-bold top-[-15px] w-full items-center justify-center">Your Manuals</h2>
         <select
-          className="w-full p-2 rounded border"
-          value={currentLayoutId} // ✅ this controls which <option> is selected
+          className="p-2 rounded border"
+          value={currentLayoutId}
           onChange={(e) => {
             const selectedId = e.target.value;
             const selectedManual = manuals.find((m) => m.id === selectedId);
