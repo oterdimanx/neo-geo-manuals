@@ -1,3 +1,5 @@
+import MaiFrameAnimation from "./MaiFrameAnimation"
+
 export default function ShortcutModal({ onClose }: { onClose: () => void }) {
     const shortcuts = [
       { key: "⌘ + S", action: "Save current manual" },
@@ -23,7 +25,9 @@ export default function ShortcutModal({ onClose }: { onClose: () => void }) {
     return (
       <div className="fixed inset-0 z-50 bg-black bg-opacity-40 flex items-center justify-center">
         <div className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full relative">
-          <h2 className="text-xl font-semibold mb-4">Keyboard Shortcuts</h2>
+          
+          <h2 className="text-xl font-semibold mb-4 relative top-[138px] left-[100px] items-center justify-center">Keyboard Shortcuts</h2>
+          <MaiFrameAnimation />
           <ul className="space-y-3">
             {shortcuts.map((s, i) => (
               <li key={i} className="flex justify-between border-b pb-1 text-sm">
@@ -34,7 +38,7 @@ export default function ShortcutModal({ onClose }: { onClose: () => void }) {
           </ul>
           <button
             onClick={onClose}
-            className="absolute top-2 right-2 p-1 text-gray-500 hover:text-black transition"
+            className="fixed top-5 text-gray-500 hover:text-black transition flex items-center justify-center"
             aria-label="Close"
           >
             ✕

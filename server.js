@@ -167,6 +167,20 @@ app.post('/generate-image', async (req, res) => {
   }
 });
 
+app.get("/api/manuals/:manualId", async (req, res) => {
+  const manualId = req.params.manualId;
+  try {
+    const manual = await getManualWithPages(manualId);
+    if (!manual) {
+      return res.status(404).json({ error: "Manual not found" });
+    }
+    res.json(manual);
+  } catch (err) {
+    console.error("Error fetching manual:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Image generator API running on http://localhost:${port}`);
 });
