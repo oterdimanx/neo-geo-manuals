@@ -34,6 +34,7 @@ function App() {
         ) : (
           <Routes>
             <Route path="/" element={<ManualEditor />} />
+            <Route path="/:manualId" element={<ManualEditor />} />
             <Route path="/preview/:manualId" element={<PreviewManual />} />
             <Route path="*" element={<NotFound />} /> {/* Catch-all */}
           </Routes>

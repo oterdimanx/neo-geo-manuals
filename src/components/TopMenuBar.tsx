@@ -95,8 +95,8 @@ import {
     };
     
     return (
-        <Tooltip text={""} >
-            <div className="flex flex-wrap gap-2 p-2 bg-white border-b shadow-sm sticky top-0 z-50">
+        <Tooltip text={"CTRL + Right Shift + / for help"} >
+            <div className="flex flex-wrap gap-2 p-2 bg-white border-b shadow-sm sticky z-50 mt-[20px] relative">
             
             <Group label="Block">
             <IconButton icon={<Plus />} label="Add Text" onClick={props.onAddTextBlock} />

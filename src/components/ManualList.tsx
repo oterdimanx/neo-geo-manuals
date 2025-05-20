@@ -87,8 +87,8 @@ const ManualList: React.FC<ManualListProps> = ({ onSelect, currentLayoutId }) =>
   }
 
   return (
-    <div className="p-4">
-      <h2 className="relative text-xl font-bold top-[-15px] w-full items-center justify-center">Your Manuals</h2>
+    <div className="bg-gray-100 p-2">
+      <h2 className="relative text-xl font-bold -top-[2px] w-full items-center justify-center">My Manuals</h2>
         <select
           className="p-2 rounded border"
           value={currentLayoutId}

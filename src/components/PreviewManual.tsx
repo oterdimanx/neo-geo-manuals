@@ -46,9 +46,8 @@ export default function PreviewManual() {
   return (
     <div className="max-w-4xl mx-auto p-6 animate-fade-in">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">{manual.title}</h1>
         <button
-          onClick={() => navigate("/")}
+          onClick={() => navigate(`/${manual.id}`)}
           className="text-sm text-blue-600 underline hover:text-blue-800"
         >
           Back to editor
@@ -57,7 +56,7 @@ export default function PreviewManual() {
 
       <div>
     {manual ? (
-      <PreviewManualBook layout={manual} />
+      <PreviewManualBook layout={manual}  />
     ) : (
       <div className="text-center mt-10">Loading manual...</div>
     )}

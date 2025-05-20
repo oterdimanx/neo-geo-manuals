@@ -31,7 +31,8 @@ import EditableTitle from "./EditableTitle"
 import deleteManual from "../DB/deleteManual"
 import TopMenuBar from "./TopMenuBar";
 import ShortcutModal from "./ShortcutModal"
-import { useNavigate } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
+import { fetchManualWithPages } from "../DB/fetchManualWithPages"
 
 export default function ManualEditor() {
 /*
@@ -81,6 +82,7 @@ export default function ManualEditor() {
   const [visibleRotateBlockId, setVisibleRotateBlockId] = useState<string | null>(null)
   const [fullscreenBlockId, setFullscreenBlockId] = useState<string | null>(null)
   const [isShortcutModalOpen, setIsShortcutModalOpen] = useState(false)
+  const { manualId } = useParams()
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -113,11 +115,17 @@ export default function ManualEditor() {
   useEffect(() => {
 
   const loadCurrentLayout = async () => {
-
       const user = await supabase.auth.getUser()
       let layout = null
+      
+      if (manualId && user.data?.user?.id) {
 
-      if (user.data?.user?.id) {
+        /** Si l'utilisateur utilise le lien de retour de la preview alors manualId est l'id du manuel prévisualisé */
+        layout = await fetchManualWithPages(manualId)
+
+      }
+      else if (user.data?.user?.id) {
+
         layout = await fetchLatestManualForUser(user.data?.user?.id)
         if (!layout) {
           // fallback to localStorage
@@ -125,6 +133,7 @@ export default function ManualEditor() {
           layout = local ? JSON.parse(local) : loadLayout()
           console.log('fallback to localStorage')
           setLayout(layout)
+
         }
       }
 
@@ -254,7 +263,6 @@ export default function ManualEditor() {
   }
 
   const handleSaveDB = async () => {
-
     if('' === userId){
       console.error('User Not Authenticated')
       return
@@ -966,8 +974,21 @@ export default function ManualEditor() {
 
   return (
     <div className="p-4 space-y-4 min-h-screen ">
-      <h1 className="text-red-500 font-pixel text-2xl">Manual Editor</h1>
-
+      <div id="editor-title" className="relative inline">
+        <div className="front relative bg-[#222] text-lime-500 text-[8vh] font-black font-serif">
+          <div className="absolute top-0 left-0 w-full h-full animate-apptitle"
+            style={{
+              background: 'radial-gradient(circle, #222 40%, transparent 40%)',
+              backgroundSize: '.5vh .5vh',
+              backgroundPosition: '-.5vh',
+            }}
+          />
+          <div className="absolute top-[-50px] left-[-10px] w-full h-full text-[#222] [text-shadow:-10px_0px_lime,-1px_-1px_lime,-8px_8px_lime]">
+            <h1 className="font-pixel">Manual Editor</h1>
+            <div className="droplet absolute left-[75%] top-[75px] transform -translate-x-1/2 mt-2 w-2 h-2 bg-lime-500 rounded-full animate-drip" />
+          </div>
+        </div>
+      </div>
       <TopMenuBar
         onUndo={undo}
         onRedo={redo}
@@ -1145,12 +1166,15 @@ export default function ManualEditor() {
         >
           Delete Manual
         </button>
+        <div className="flex items-center space-x-2 mb-2">
+          <EditableTitle title={layout.title || 'Untitled Manual'} onSave={handleTitleSave} />
+          <button 
+            className="transition duration-300 hover:rotate-180 hover:text-green-100  hover:drop-shadow-md"
+            onClick={() => { navigate(`/preview/${layout.id}`) }} >
 
-        <EditableTitle title={layout.title || 'Untitled Manual'} onSave={handleTitleSave} />
-        <button onClick={() => { navigate(`/preview/${layout.id}`) }}>
-          <Eye className="w-20" size={100}  />
-        </button>
-
+            <Eye className="w-20 hover:text-lime-500" size={100}  />
+          </button>
+        </div>
       </div>
 
       <div className="flex">
