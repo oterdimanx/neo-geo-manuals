@@ -965,7 +965,7 @@ export default function ManualEditor() {
   };
 
   return (
-    <div className="p-4 space-y-4 min-h-screen bg-gray-100">
+    <div className="p-4 space-y-4 min-h-screen ">
       <h1 className="text-red-500 font-pixel text-2xl">Manual Editor</h1>
 
       <TopMenuBar

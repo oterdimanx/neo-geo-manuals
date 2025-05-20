@@ -57,7 +57,7 @@ export default function PreviewManual() {
 
       <div>
     {manual ? (
-      <PreviewManualBook manual={manual} />
+      <PreviewManualBook layout={manual} />
     ) : (
       <div className="text-center mt-10">Loading manual...</div>
     )}

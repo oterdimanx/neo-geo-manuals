@@ -1,134 +1,90 @@
 
 import { ManualLayout, ManualBlock} from '@/types/ManualLayout'
-import React, { useState } from 'react'
+import React, { useState } from "react"
 
-type Props = {
-    manual: ManualLayout;
+type PreviewManualBookProps = {
+  layout: ManualLayout
 };
 
-type ManualPage = {
-    id: string
-    blocks: ManualBlock[]
-    backgroundColor?: string
-  };
+export const PreviewManualBook: React.FC<PreviewManualBookProps> = ({ layout }) => {
+
+    const [currentSpread, setCurrentSpread] = useState(0)
+    const totalSpreads = Math.ceil((layout.pages.length - 1) / 2) // page 1 is cover
   
-  export const PreviewManualBook: React.FC<Props> = ({ manual }) => {
-    const pages = manual.pages || [];
-    const [currentIndex, setCurrentIndex] = useState(0);
-  
-    const isCover = currentIndex === 0;
-    const canGoNext = currentIndex + 2 < pages.length;
-    const canGoPrev = currentIndex > 0;
-  
-    const handleNext = () => {
-      if (canGoNext) setCurrentIndex(currentIndex + 2);
+    const goNext = () => {
+      if (currentSpread < totalSpreads) setCurrentSpread((prev) => prev + 1)
     };
   
-    const handlePrev = () => {
-      if (canGoPrev) setCurrentIndex(currentIndex - 2);
+    const goPrev = () => {
+      if (currentSpread > 0) setCurrentSpread((prev) => prev - 1)
     };
   
-    const renderBlock = (block: any) => {
-      const baseStyle = {
-        top: block.y,
-        left: block.x,
-        width: block.width,
-        height: block.height,
-        zIndex: block.zIndex || 1,
-        position: 'absolute' as const,
-      };
-  
+    const renderBlock = (block: ManualBlock) => {
       if (block.type === 'text') {
-        return (
-          <div
-            key={block.id}
-            className="p-1 whitespace-pre-wrap break-words"
-            style={{
-              ...baseStyle,
-              fontSize: block.fontSize,
-              fontWeight: block.fontWeight || 'normal',
-              fontStyle: block.italic ? 'italic' : 'normal',
-              color: block.color || '#000',
-              fontFamily: block.fontFamily || 'sans-serif',
-              transform: `rotate(${block.rotation || 0}deg)`,
-            }}
-          >
-            {block.content}
-          </div>
-        );
+        const style = {
+          fontSize: `${block.fontSize}px`,
+          fontWeight: block.fontWeight || 'normal',
+          fontFamily: block.fontFamily || 'sans-serif',
+          color: block.color || '#000',
+          fontStyle: block.italic ? 'italic' : 'normal',
+          transform: `rotate(${block.rotation || 0}deg)`,
+        }
+        return <div key={block.id} style={style} className="absolute" dangerouslySetInnerHTML={{ __html: block.content }} />
       }
   
       if (block.type === 'image') {
         return (
-          <div
+          <img
             key={block.id}
-            style={{
-              ...baseStyle,
-              opacity: block.opacity ?? 1,
-            }}
-          >
-            <img
-              src={block.src}
-              alt={block.altText || ''}
-              className="w-full h-full object-contain"
-            />
-          </div>
-        );
+            src={block.src}
+            alt={block.altText || ''}
+            className="absolute"
+            style={{ opacity: block.opacity ?? 1 }}
+          />
+        )
       }
   
-      return null;
-    };
+      return null
+    }
   
-    const renderPage = (page: ManualPage | undefined, extraClasses = '') => {
-      if (!page) return <div className="w-full h-full bg-gray-100" />;
+    const renderPage = (pageIndex: number) => {
+      const page = layout.pages[pageIndex]
+      if (!page) return null
   
       return (
         <div
-          className={`absolute w-full h-full bg-white shadow-inner p-4 transition-transform duration-700 ${extraClasses}`}
-          style={{
-            backgroundColor: page.backgroundColor || '#fff',
-          }}
+          key={page.id}
+          className="relative w-[300px] h-[300px] bg-white shadow-md overflow-hidden border border-gray-300"
+          style={{ backgroundColor: page.backgroundColor }}
         >
           {page.blocks.map(renderBlock)}
         </div>
-      );
-    };
+      )
+    }
   
     return (
-      <div className="flex flex-col items-center justify-center scale-[0.8]">
-        <div className="relative flex w-[900px] h-[600px] perspective-[2000px]">
-          {isCover ? (
-            <div className="relative w-full h-full border border-gray-300 overflow-hidden">
-              {renderPage(pages[0])}
-            </div>
+      <div className="flex flex-col items-center">
+        <div className="relative flex gap-4 items-center justify-center p-4">
+          {currentSpread === 0 ? (
+            // Cover page
+            renderPage(0)
           ) : (
             <>
-              <div className="relative w-1/2 h-full border-r border-gray-300 overflow-hidden">
-                {renderPage(pages[currentIndex])}
-              </div>
-              <div className="relative w-1/2 h-full overflow-hidden">
-                {renderPage(pages[currentIndex + 1])}
-              </div>
+              {renderPage(currentSpread * 2 - 1)}
+              {renderPage(currentSpread * 2)}
             </>
           )}
         </div>
   
-        <div className="mt-4 flex gap-4">
-          <button
-            onClick={handlePrev}
-            disabled={!canGoPrev}
-            className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded disabled:opacity-50"
-          >
-            ◀ Previous
+        <div className="flex gap-4 mt-4">
+          <button onClick={goPrev} className="px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 disabled:opacity-50" disabled={currentSpread === 0}>
+            Previous
           </button>
-          <button
-            onClick={handleNext}
-            disabled={!canGoNext}
-            className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded disabled:opacity-50"
-          >
-            Next ▶
+          <button onClick={goNext} className="px-4 py-2 bg-blue-700 text-white rounded hover:bg-blue-600 disabled:opacity-50" disabled={currentSpread >= totalSpreads}>
+            Next
           </button>
         </div>
       </div>
-    );
-  };
+    )
+  }
+  
