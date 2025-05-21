@@ -10,5 +10,10 @@
     "dev": "node server.js"
   },
   "author": "olivier terdiman",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0"
+  }
 }
