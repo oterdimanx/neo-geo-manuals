@@ -9,7 +9,7 @@ export default function NotFound() {
         {/* Background GIF */}
         <div className="absolute inset-0">
           <img
-            src="/public/Politank-Z-Evening-Animated-Stage-Backgrond-Sprite-GIF-Waku-Waku-7-Neo-Geo.gif"
+            src="/Politank-Z-Evening-Animated-Stage-Backgrond-Sprite-GIF-Waku-Waku-7-Neo-Geo.gif"
             alt="Retro background"
             className="w-full h-full object-cover"
           />
@@ -18,7 +18,7 @@ export default function NotFound() {
         {/* Overlay GIF */}
         <div className="absolute inset-0 pointer-events-none backdrop-blur-sm ">
           <img
-            src="/public/king-of-fighters-animated-fight-158545.gif"
+            src="/king-of-fighters-animated-fight-158545.gif"
             alt="Electric overlay"
             className="w-full h-full object-cover"
           />
