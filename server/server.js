@@ -9,14 +9,22 @@ dotenv.config();
 const app = express();
 const port = 3001; // Pick any free port not used by Vite
 
-app.use(cors( { 
-  origin: [
-    'https://neogeo-manuals.netlify.app',
-    'http://localhost:5173'
-  ],
+const allowedOrigins = [
+  'http://localhost:5173',             // Local dev (Vite default)
+  'https://neogeo-manuals.netlify.app',     // Replace with your actual Netlify site URL
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true); // allow the request
+    } else {
+      callback(new Error('Not allowed by CORS')); // block the request
+    }
+  },
   credentials: true,
-}
-));
+}));
+
 app.use(express.json());
 
 const openai = process.env.OPENAI_API_KEY
