@@ -122,6 +122,9 @@ export default function ManualEditor() {
 
         /** Si l'utilisateur utilise le lien de retour de la preview alors manualId est l'id du manuel prévisualisé */
         layout = await fetchManualWithPages(manualId)
+        if(null == layout){
+          navigate("/404")
+        }
 
       }
       else if (user.data?.user?.id) {
@@ -755,7 +758,7 @@ export default function ManualEditor() {
   
     try {
       
-      const res = await fetch('http://localhost:3001/generate-image', {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/generate-image`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -985,7 +988,7 @@ export default function ManualEditor() {
           />
           <div className="absolute top-[-50px] left-[-10px] w-full h-full text-[#222] [text-shadow:-10px_0px_lime,-1px_-1px_lime,-8px_8px_lime]">
             <h1 className="font-pixel">Manual Editor</h1>
-            <div className="droplet absolute left-[75%] top-[75px] transform -translate-x-1/2 mt-2 w-2 h-2 bg-lime-500 rounded-full animate-drip" />
+            <div className="droplet absolute left-[84%] top-[77px] transform -translate-x-1/2 mt-2 w-2 h-2 bg-lime-500 rounded-full animate-drip" />
           </div>
         </div>
       </div>

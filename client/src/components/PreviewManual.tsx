@@ -18,7 +18,7 @@ export default function PreviewManual() {
         setManual(layout)
       } catch (err) {
         console.error(err)
-        navigate("/") // Or show an error page
+        navigate("/404") // Or show an error page
       } finally {
         setLoading(false)
       }

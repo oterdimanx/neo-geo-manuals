@@ -28,7 +28,7 @@ function App() {
 
   return (
     <div className="flex items-center justify-center flex-col min-h-screen bg-gradient-to-br from-gray-100 to-gray-300">
-      <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-6xl">
+      <div className="bg-white p-6 rounded-lg shadow-md w-full">
         {!session ? (
           <AuthPanel />
         ) : (
@@ -36,6 +36,7 @@ function App() {
             <Route path="/" element={<ManualEditor />} />
             <Route path="/:manualId" element={<ManualEditor />} />
             <Route path="/preview/:manualId" element={<PreviewManual />} />
+            <Route path="/404" element={<NotFound />} /> {/* When redirection page is needed */}
             <Route path="*" element={<NotFound />} /> {/* Catch-all */}
           </Routes>
         )}

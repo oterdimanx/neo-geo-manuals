@@ -1,15 +1,12 @@
 import { ManualBlock, ManualLayout } from '@/types/ManualLayout';
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 
-interface BookletProps {
-  layout: ManualLayout;
-}
-
-export const PreviewManualBook = ({ layout }: BookletProps) => {
+export const PreviewManualBook = ({ layout }: { layout: ManualLayout }) => {
   const [currentPage, setCurrentPage] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [direction, setDirection] = useState<'next' | 'prev'>('next');
+  const animationRef = useRef<HTMLDivElement>(null);
   const totalPages = layout.pages.length;
 
   const isFirstPage = currentPage === 0;
@@ -17,17 +14,14 @@ export const PreviewManualBook = ({ layout }: BookletProps) => {
 
   const navigate = (dir: 'next' | 'prev') => {
     if (isAnimating) return;
-    
+    if ((dir === 'next' && isLastPage) || (dir === 'prev' && isFirstPage)) return;
+
     setDirection(dir);
     setIsAnimating(true);
-    
-    if (dir === 'next' && !isLastPage) {
-      setCurrentPage(currentPage + 1);
-    } else if (dir === 'prev' && !isFirstPage) {
-      setCurrentPage(currentPage - 1);
-    }
-    
-    setTimeout(() => setIsAnimating(false), 1000);
+    setTimeout(() => {
+      setCurrentPage(dir === 'next' ? currentPage + 1 : currentPage - 1);
+      setIsAnimating(false);
+    }, 800);
   };
 
   const renderBlock = (block: ManualBlock) => {
@@ -53,7 +47,7 @@ export const PreviewManualBook = ({ layout }: BookletProps) => {
         ) : (
           <img
             src={(block).src}
-            className="w-[45%] h-[45%] object-cover"
+            className="w-full h-full object-cover"
             alt=""
           />
         )}
@@ -67,18 +61,18 @@ export const PreviewManualBook = ({ layout }: BookletProps) => {
         <h1 className="text-3xl font-bold text-center mb-6">{layout.title}</h1>
       )}
 
-      <div className="relative w-full h-full flex justify-center perspective-1000">
-        {/* Static background */}
-        <div className="absolute w-full h-full bg-gray-100 rounded-lg shadow-lg"></div>
+      <div className="relative w-full h-full flex justify-center perspective-1200">
+        {/* Static book cover */}
+        <div className="absolute w-full h-full bg-gray-100 rounded-lg shadow-xl"></div>
 
-        {/* Current Page (left side when in spread) */}
+        {/* Left Page (when not on first page) */}
         {!isFirstPage && (
           <div 
-            className="absolute inset-0 left-0 w-1/2 h-full bg-white origin-right z-10 cursor-pointer"
+            className={`absolute left-0 w-1/2 h-full origin-right z-10 ${isAnimating ? 'pointer-events-none' : 'cursor-pointer'}`}
             style={{
               backgroundColor: layout.pages[currentPage - 1]?.backgroundColor || "#fff",
             }}
-            onClick={() => navigate('prev')}
+            onClick={() => !isAnimating && navigate('prev')}
           >
             {layout.pages[currentPage - 1]?.blocks.map(renderBlock)}
           </div>
@@ -86,23 +80,23 @@ export const PreviewManualBook = ({ layout }: BookletProps) => {
 
         {/* Current Page (right side) */}
         <div 
-          className="absolute right-0 w-1/2 h-full bg-white origin-left z-20 cursor-pointer"
+          className={`absolute right-0 w-1/2 h-full origin-left z-20 ${isLastPage || isAnimating ? 'pointer-events-none' : 'cursor-pointer'}`}
           style={{
             backgroundColor: layout.pages[currentPage]?.backgroundColor || "#fff",
           }}
-          onClick={() => navigate('next')}
+          onClick={() => !isAnimating && !isLastPage && navigate('next')}
         >
           {layout.pages[currentPage]?.blocks.map(renderBlock)}
         </div>
 
-        {/* Next Page (right side when in spread) */}
+        {/* Next Page (when not on last page) */}
         {!isLastPage && (
           <div 
-            className="absolute right-0 w-1/2 h-full bg-white origin-left z-10 cursor-pointer"
+            className={`absolute right-0 w-1/2 h-full origin-left z-10 ${isAnimating ? 'pointer-events-none' : 'cursor-pointer'}`}
             style={{
               backgroundColor: layout.pages[currentPage + 1]?.backgroundColor || "#fff",
             }}
-            onClick={() => navigate('next')}
+            onClick={() => !isAnimating && navigate('next')}
           >
             {layout.pages[currentPage + 1]?.blocks.map(renderBlock)}
           </div>
@@ -112,7 +106,8 @@ export const PreviewManualBook = ({ layout }: BookletProps) => {
         <AnimatePresence>
           {isAnimating && (
             <motion.div
-              key={`page-turn-${currentPage}`}
+              ref={animationRef}
+              key={`page-turn-${currentPage}-${direction}`}
               className={`absolute ${direction === 'next' ? 'right-0' : 'left-0'} w-1/2 h-full z-30`}
               style={{
                 transformOrigin: direction === 'next' ? 'left center' : 'right center',
@@ -120,38 +115,39 @@ export const PreviewManualBook = ({ layout }: BookletProps) => {
               }}
               initial={{ 
                 rotateY: 0,
-                background: direction === 'next' 
-                  ? layout.pages[currentPage]?.backgroundColor || "#fff"
-                  : layout.pages[currentPage - 1]?.backgroundColor || "#fff"
+                boxShadow: direction === 'next' 
+                  ? '20px 0px 30px -10px rgba(0,0,0,0.3)' 
+                  : '-20px 0px 30px -10px rgba(0,0,0,0.3)'
               }}
               animate={{ 
-                rotateY: direction === 'next' ? -180 : 180,
+                rotateY: direction === 'next' ? -170 : 170,
+                boxShadow: direction === 'next' 
+                  ? '40px 0px 50px -5px rgba(0,0,0,0.4)' 
+                  : '-40px 0px 50px -5px rgba(0,0,0,0.4)'
               }}
               exit={{ rotateY: 0 }}
               transition={{ 
-                duration: 1,
-                ease: [0.16, 1, 0.3, 1] // Custom easing for natural movement
+                duration: 0.8,
+                ease: "easeOut"
               }}
             >
               {/* Front of turning page */}
               <div className="absolute w-full h-full" style={{
                 backgroundColor: direction === 'next' 
                   ? layout.pages[currentPage]?.backgroundColor || "#fff"
-                  : layout.pages[currentPage - 1]?.backgroundColor || "#fff",
-                backfaceVisibility: 'hidden',
+                  : layout.pages[currentPage - (direction === 'prev' ? 1 : 0)]?.backgroundColor || "#fff",
               }}>
                 {direction === 'next' 
                   ? layout.pages[currentPage]?.blocks.map(renderBlock)
                   : layout.pages[currentPage - 1]?.blocks.map(renderBlock)}
               </div>
               
-              {/* Back of turning page (visible during turn) */}
+              {/* Back of turning page */}
               <div className="absolute w-full h-full" style={{
                 backgroundColor: direction === 'next' 
                   ? layout.pages[currentPage + 1]?.backgroundColor || "#fff"
                   : layout.pages[currentPage]?.backgroundColor || "#fff",
                 transform: 'rotateY(180deg)',
-                backfaceVisibility: 'hidden',
               }}>
                 {direction === 'next' 
                   ? layout.pages[currentPage + 1]?.blocks.map(renderBlock)

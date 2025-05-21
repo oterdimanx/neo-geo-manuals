@@ -182,5 +182,5 @@ app.get("/api/manuals/:manualId", async (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`Image generator API running on http://localhost:${port}`);
+  console.log(`Image generator API running port:${port}`);
 });
