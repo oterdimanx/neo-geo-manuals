@@ -758,7 +758,11 @@ export default function ManualEditor() {
   
     try {
       
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/generate-image`, {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL
+
+      console.log(import.meta.env.VITE_API_BASE_URL)
+
+      const res = await fetch(`${baseUrl}/generate-image`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -10,9 +10,13 @@ const app = express();
 const port = 3001; // Pick any free port not used by Vite
 
 app.use(cors( { 
-  origin: 'https://neogeo-manuals.netlify.app/',
+  origin: [
+    'https://neogeo-manuals.netlify.app',
+    'http://localhost:5173'
+  ],
   credentials: true,
-} ));
+}
+));
 app.use(express.json());
 
 const openai = process.env.OPENAI_API_KEY
