@@ -980,7 +980,7 @@ export default function ManualEditor() {
   };
 
   return (
-    <div className="p-4 space-y-4 min-h-screen ">
+    <div className="p-4 space-y-4 min-h-screen">
       <div id="editor-title" className="relative inline">
         <div className="front relative bg-[#222] text-lime-500 text-[8vh] font-black font-serif">
           <div className="absolute top-0 left-0 w-full h-full animate-apptitle"

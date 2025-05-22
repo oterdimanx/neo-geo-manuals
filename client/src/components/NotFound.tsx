@@ -4,8 +4,22 @@ import { Link } from "react-router-dom";
 export default function NotFound() {
     return (
         <div className="min-h-screen bg-gray-100">
-        <h1 className="text-red-500 font-pixel text-2xl">Manual Editor</h1>
-      <div className="relative w-full h-screen overflow-hidden">
+          <div id="editor-title" className="relative inline">
+            <div className="front relative bg-[#222] text-lime-500 text-[8vh] font-black font-serif">
+              <div className="absolute top-0 left-0 w-full h-full animate-apptitle"
+                style={{
+                  background: 'radial-gradient(circle, #222 40%, transparent 40%)',
+                  backgroundSize: '.5vh .5vh',
+                  backgroundPosition: '-.5vh',
+                }}
+              />
+              <div className="absolute top-[-50px] left-[-10px] w-full h-full text-[#222] [text-shadow:-10px_0px_lime,-1px_-1px_lime,-8px_8px_lime]">
+                <h1 className="font-pixel">Manual Editor</h1>
+                <div className="droplet absolute left-[64%] top-[77px] transform -translate-x-1/2 mt-2 w-2 h-2 bg-lime-500 rounded-full animate-drip" />
+              </div>
+            </div>
+          </div>
+      <div className="relative w-full h-screen overflow-hidden top-[50px]">
         {/* Background GIF */}
         <div className="absolute inset-0">
           <img
