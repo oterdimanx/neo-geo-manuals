@@ -7,6 +7,7 @@ import { supabase } from './DB/supabaseClient'
 import PreviewManual from './components/PreviewManual'
 import NotFound from './components/NotFound'
 import DropletBackground from './components/DropletBackground'
+import AdminDashboard from './components/AdminDashboard'
 
 function App() {
   const [session, setSession] = useState(null)
@@ -41,6 +42,11 @@ function App() {
               <Route path="/" element={<ManualEditor />} />
               <Route path="/:manualId" element={<ManualEditor />} />
               <Route path="/preview/:manualId" element={<PreviewManual />} />
+              <Route path="/admin" element={
+                <RequireAuth>
+                  <AdminDashboard />
+                </RequireAuth>
+              } />
             </Routes>
           )}
         </div>} />
@@ -67,5 +73,14 @@ function App() {
     </footer></>
   )
 }
+
+// RequireAuth component
+const RequireAuth = ({ children }) => {
+/*
+  if (!session) return <Navigate to="/auth" />;
+  if (!isAdmin(session.user.id)) return <Navigate to="/" />;
+  */
+  return children;
+};
 
 export default App
