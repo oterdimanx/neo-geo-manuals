@@ -1,35 +1,33 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js'
 
-export async function handler(event) {
-  const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_KEY
-  );
-  
-  // Verify JWT from cookies
-  const { user } = await supabase.auth.api.getUser(event.headers.cookie);
-  
-  if (!user || !(await isAdmin(user.id))) {
-    return { statusCode: 403 };
+export const handler = async (event) => {
+  try {
+    const supabase = createClient(
+      process.env.VITE_SUPABASE_URL,
+      process.env.VITE_SUPABASE_SERVICE_KEY
+    )
+
+    const token = event.headers.authorization?.split('Bearer ')[1]
+    if (!token) {
+      return {
+        statusCode: 401,
+        body: JSON.stringify({ error: "No token provided" }),
+        headers: { 'Content-Type': 'application/json' }
+      }
+    }
+
+    const { data } = await supabase.from('profiles').select('*')
+    return {
+      statusCode: 200,
+      body: JSON.stringify(data),
+      headers: { 'Content-Type': 'application/json' }
+    }
+
+  } catch (error) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: error.message }),
+      headers: { 'Content-Type': 'application/json' }
+    }
   }
-
-  // Fetch subscriptions
-  const { data } = await supabase
-    .from('profiles')
-    .select('id, email, subscription_status, created_at');
-
-  return {
-    statusCode: 200,
-    body: JSON.stringify(data)
-  };
-}
-
-async function isAdmin(userId) {
-  const { data } = await supabase
-    .from('user_roles')
-    .select()
-    .eq('user_id', userId)
-    .eq('role', 'admin');
-    
-  return data.length > 0;
 }
