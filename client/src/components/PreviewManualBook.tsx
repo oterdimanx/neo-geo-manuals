@@ -3,178 +3,100 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState, useRef } from 'react';
 
 export const PreviewManualBook = ({ layout }: { layout: ManualLayout }) => {
-  const [currentPage, setCurrentPage] = useState(0);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [direction, setDirection] = useState<'next' | 'prev'>('next');
-  const animationRef = useRef<HTMLDivElement>(null);
-  const totalPages = layout.pages.length;
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const [direction, setDirection] = useState(1); // 1 = forward, -1 = backward
 
-  const isFirstPage = currentPage === 0;
-  const isLastPage = currentPage === totalPages - 1;
-
-  const navigate = (dir: 'next' | 'prev') => {
-    if (isAnimating) return;
-    if ((dir === 'next' && isLastPage) || (dir === 'prev' && isFirstPage)) return;
-
-    setDirection(dir);
-    setIsAnimating(true);
-    setTimeout(() => {
-      setCurrentPage(dir === 'next' ? currentPage + 1 : currentPage - 1);
-      setIsAnimating(false);
-    }, 800);
+  const handleNextPage = () => {
+    setDirection(1);
+    if (currentPageIndex < layout.pages.length - 1) {
+      setCurrentPageIndex(prev => prev + 1);
+    }
   };
 
-  const renderBlock = (block: ManualBlock) => {
+  const handlePrevPage = () => {
+    setDirection(-1);
+    if (currentPageIndex > 0) {
+      setCurrentPageIndex(prev => prev - 1);
+    }
+  };
 
-    return (
-        <div
-        key={block.id}
-        className="absolute"
-        style={{
-          zIndex: 1, // ensures it's above the background
-          left: `${(block.x / 800) * 100}%`,
-          top: `${(block.y / 600) * 100}%`,
-          width: `${(block.width / 800) * 100}%`,
-          height: `${(block.height / 600) * 100}%`,
-          backgroundColor: block.type === "text" ? "#ccc" : "transparent",
-          border: "1px solid #999",
-          fontSize: "6px",
-          overflow: "hidden",
-        }}
-      >
-        {block.type === "text" ? (
-          <span>{(block).content.slice(0, 10)}</span>
-        ) : (
-          <img
-            src={(block).src}
-            className="w-full h-full object-cover"
-            alt=""
-          />
-        )}
-      </div>
-    );
+  const currentPage = layout.pages[currentPageIndex];
+  const squareSize = Math.min(500, 500);
+
+  // Animation configurations
+  const pageVariants = {
+    initial: (direction: number) => ({
+      x: direction > 0 ? '100%' : '-100%',
+      opacity: 0.5
+    }),
+    animate: {
+      x: 0,
+      opacity: 1,
+      transition: { type: 'tween', duration: 0.3 }
+    },
+    exit: (direction: number) => ({
+      x: direction > 0 ? '-100%' : '100%',
+      opacity: 0.5,
+      transition: { type: 'tween', duration: 0.3 }
+    })
   };
 
   return (
-    <div className="relative w-[800px] h-[600px] mx-auto">
-      {layout.title && (
-        <h1 className="text-3xl font-bold text-center mb-6">{layout.title}</h1>
-      )}
-
-      <div className="relative w-full h-full flex justify-center perspective-1200">
-        {/* Static book cover */}
-        <div className="absolute w-full h-full bg-gray-100 rounded-lg shadow-xl"></div>
-
-        {/* Left Page (when not on first page) */}
-        {!isFirstPage && (
-          <div 
-            className={`absolute left-0 w-1/2 h-full origin-right z-10 ${isAnimating ? 'pointer-events-none' : 'cursor-pointer'}`}
-            style={{
-              backgroundColor: layout.pages[currentPage - 1]?.backgroundColor || "#fff",
-            }}
-            onClick={() => !isAnimating && navigate('prev')}
+    <div className="flex flex-col items-center p-4">
+      <div 
+        className="relative overflow-hidden shadow-lg"
+        style={{
+          width: squareSize,
+          height: squareSize,
+        }}
+      >
+        <AnimatePresence initial={false} custom={direction}>
+          <motion.div
+            key={currentPageIndex}
+            custom={direction}
+            variants={pageVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            className="w-full h-full flex flex-col justify-center items-center p-4"
+            style={{ backgroundColor: currentPage.backgroundColor }}
           >
-            {layout.pages[currentPage - 1]?.blocks.map(renderBlock)}
-          </div>
-        )}
-
-        {/* Current Page (right side) */}
-        <div 
-          className={`absolute right-0 w-1/2 h-full origin-left z-20 ${isLastPage || isAnimating ? 'pointer-events-none' : 'cursor-pointer'}`}
-          style={{
-            backgroundColor: layout.pages[currentPage]?.backgroundColor || "#fff",
-          }}
-          onClick={() => !isAnimating && !isLastPage && navigate('next')}
-        >
-          {layout.pages[currentPage]?.blocks.map(renderBlock)}
-        </div>
-
-        {/* Next Page (when not on last page) */}
-        {!isLastPage && (
-          <div 
-            className={`absolute right-0 w-1/2 h-full origin-left z-10 ${isAnimating ? 'pointer-events-none' : 'cursor-pointer'}`}
-            style={{
-              backgroundColor: layout.pages[currentPage + 1]?.backgroundColor || "#fff",
-            }}
-            onClick={() => !isAnimating && navigate('next')}
-          >
-            {layout.pages[currentPage + 1]?.blocks.map(renderBlock)}
-          </div>
-        )}
-
-        {/* Page Turn Animation */}
-        <AnimatePresence>
-          {isAnimating && (
-            <motion.div
-              ref={animationRef}
-              key={`page-turn-${currentPage}-${direction}`}
-              className={`absolute ${direction === 'next' ? 'right-0' : 'left-0'} w-1/2 h-full z-30`}
-              style={{
-                transformOrigin: direction === 'next' ? 'left center' : 'right center',
-                backfaceVisibility: 'hidden',
-              }}
-              initial={{ 
-                rotateY: 0,
-                boxShadow: direction === 'next' 
-                  ? '20px 0px 30px -10px rgba(0,0,0,0.3)' 
-                  : '-20px 0px 30px -10px rgba(0,0,0,0.3)'
-              }}
-              animate={{ 
-                rotateY: direction === 'next' ? -170 : 170,
-                boxShadow: direction === 'next' 
-                  ? '40px 0px 50px -5px rgba(0,0,0,0.4)' 
-                  : '-40px 0px 50px -5px rgba(0,0,0,0.4)'
-              }}
-              exit={{ rotateY: 0 }}
-              transition={{ 
-                duration: 0.8,
-                ease: "easeOut"
-              }}
-            >
-              {/* Front of turning page */}
-              <div className="absolute w-full h-full" style={{
-                backgroundColor: direction === 'next' 
-                  ? layout.pages[currentPage]?.backgroundColor || "#fff"
-                  : layout.pages[currentPage - (direction === 'prev' ? 1 : 0)]?.backgroundColor || "#fff",
-              }}>
-                {direction === 'next' 
-                  ? layout.pages[currentPage]?.blocks.map(renderBlock)
-                  : layout.pages[currentPage - 1]?.blocks.map(renderBlock)}
+            {currentPage.blocks.map((block: any, index: number) => (
+              <div key={index} className="w-full my-1">
+                {block.type === 'text' ? (
+                  <div className="text-center break-words">{block.content}</div>
+                ) : (
+                  <img 
+                    src={block.content} 
+                    alt={`Page ${currentPageIndex + 1} Image ${index + 1}`}
+                    className="max-w-full mx-auto"
+                    style={{ maxHeight: squareSize * 0.6 }}
+                  />
+                )}
               </div>
-              
-              {/* Back of turning page */}
-              <div className="absolute w-full h-full" style={{
-                backgroundColor: direction === 'next' 
-                  ? layout.pages[currentPage + 1]?.backgroundColor || "#fff"
-                  : layout.pages[currentPage]?.backgroundColor || "#fff",
-                transform: 'rotateY(180deg)',
-              }}>
-                {direction === 'next' 
-                  ? layout.pages[currentPage + 1]?.blocks.map(renderBlock)
-                  : layout.pages[currentPage]?.blocks.map(renderBlock)}
-              </div>
-            </motion.div>
-          )}
+            ))}
+          </motion.div>
         </AnimatePresence>
       </div>
 
-      <div className="flex justify-between mt-6">
+      {/* Unchanged navigation */}
+      <div className="flex justify-center items-center mt-4 gap-4">
         <button
-          onClick={() => navigate('prev')}
-          disabled={isFirstPage}
-          className="px-6 py-2 bg-gray-200 rounded-lg disabled:opacity-50"
+          className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
+          onClick={handlePrevPage}
+          disabled={currentPageIndex === 0}
         >
-          ← Previous
+          Previous
         </button>
-        <span className="self-center">
-          Page {currentPage + 1} of {totalPages}
+        <span className="mx-2">
+          Page {currentPageIndex + 1} of {layout.pages.length}
         </span>
         <button
-          onClick={() => navigate('next')}
-          disabled={isLastPage}
-          className="px-6 py-2 bg-gray-200 rounded-lg disabled:opacity-50"
+          className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
+          onClick={handleNextPage}
+          disabled={currentPageIndex === layout.pages.length - 1}
         >
-          Next →
+          Next
         </button>
       </div>
     </div>

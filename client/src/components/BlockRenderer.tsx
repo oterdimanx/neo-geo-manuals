@@ -1,6 +1,6 @@
 import React from 'react';
 import type { ManualBlock } from '@/types/ManualLayout'
-
+/** This component is not used yet */
 type Props = {
   block: ManualBlock;
 };
