@@ -4,6 +4,11 @@ export default {
         "./index.html",
         "./src/**/*.{js,ts,jsx,tsx}",
     ],
+    safelist: [
+    'will-change-transform',
+    'backface-visible',
+    'perspective-1000',
+  ],
     theme: {
         extend: {
             colors: {
@@ -20,6 +25,7 @@ export default {
                 "flip": 'flip 1s ease-in-out forwards',
                 'apptitle': 'apptitle 15s linear infinite',
                 'drip': 'drip 20s ease-out infinite',
+                'dropletfall': 'dropletfall var(--duration) var(--delay) infinite linear',
               },
               keyframes: {
                 fadeIn: {

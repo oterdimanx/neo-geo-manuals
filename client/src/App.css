@@ -74,3 +74,59 @@
   background: lime;
   opacity: 0.3;
 }
+
+.bigdroplet::after {
+  content: '';
+  display: inline-block;
+  top: -20px;
+  left: -50%;
+  width: 200px;
+  height: 200px;
+  background-color: lime;
+  border-radius: 50%;
+  margin-left: 0.2em;
+  margin-bottom: 0.1em;
+  animation: drip 10s ease-out infinite;
+}
+
+@keyframes dropletfall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.8;
+  }
+  90% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(calc(100vh + 150px)) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes droplet-float {
+  0%, 100% {
+    transform: translateY(0) translateX(0);
+  }
+  50% {
+    transform: translateY(-20px) translateX(10px);
+  }
+}
+
+/* For some floating droplets (optional) */
+.floating-droplet {
+  animation: droplet-float 4s ease-in-out infinite;
+  animation-delay: calc(var(--delay) * 1s);
+}
+
+input, textarea, [contenteditable] {
+  transform: translateZ(0);
+  contain: content;
+}
+
+.droplet {
+  backface-visibility: hidden;
+  will-change: transform;
+}

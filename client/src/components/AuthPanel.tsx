@@ -46,33 +46,38 @@ export default function AuthPanel() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 p-4 border rounded shadow max-w-sm">
-      <h2 className="text-xl font-bold">{isLogin ? 'Login' : 'Sign Up'}</h2>
-      <input
-        type="email"
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        className="border p-2 w-full"
-        required
-      />
-      <input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        className="border p-2 w-full"
-        required
-      />
-      <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded w-full">
-        {isLogin ? 'Login' : 'Sign Up'}
-      </button>
-      <p
-        onClick={() => setIsLogin(!isLogin)}
-        className="text-sm cursor-pointer text-blue-500 text-center"
-      >
-        {isLogin ? "Don't have an account? Sign Up" : 'Already have an account? Login'}
-      </p>
-    </form>
+    <><div className="relative w-full overflow-hidden">
+    </div><div className="relative z-10">
+        <form onSubmit={handleSubmit} className="space-y-4 p-4 border rounded shadow max-w-sm">
+          <h2 className="text-xl font-bold">{isLogin ? 'Login' : 'Sign Up'}</h2>
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="border p-2 w-full transform-gpu"
+            required />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="border p-2 w-full transform-gpu"
+            required />
+          <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded w-full">
+            {isLogin ? 'Login' : 'Sign Up'}
+          </button>
+          <p
+            onClick={() => setIsLogin(!isLogin)}
+            className="text-sm cursor-pointer text-blue-500 text-center"
+          >
+            {isLogin ? "Don't have an account? Sign Up" : 'Already have an account? Login'}
+          </p>
+        </form>
+      </div></>
+
+
+
+
   )
 }
