@@ -59,15 +59,30 @@ export const PreviewManualBook = ({ layout }: { layout: ManualLayout }) => {
             animate="animate"
             exit="exit"
             className="w-full h-full flex flex-col justify-center items-center p-4"
-            style={{ backgroundColor: currentPage.backgroundColor }}
+            style={{ 
+              backgroundColor: currentPage.backgroundColor }}
           >
             {currentPage.blocks.map((block: any, index: number) => (
-              <div key={index} className="w-full my-1">
+              <div key={index} className="w-full my-1 relative">
                 {block.type === 'text' ? (
-                  <div className="text-center break-words">{block.content}</div>
+                  <div 
+                  style={{ 
+                    backgroundColor: block.type === "text" ? "#ccc" : "transparent",
+                    border: "1px solid #999",
+                    fontSize: block.fontSize,
+                    fontFamily: block.fontFamily,
+                    overflow: "hidden",
+                    zIndex: 1,
+                    left: `${block.x}px`,
+                    top: `${block.y}px`,
+                   }}
+
+                  className="text-center break-words">
+                    {block.content}
+                    </div>
                 ) : (
                   <img 
-                    src={block.content} 
+                    src={block.src} 
                     alt={`Page ${currentPageIndex + 1} Image ${index + 1}`}
                     className="max-w-full mx-auto"
                     style={{ maxHeight: squareSize * 0.6 }}
